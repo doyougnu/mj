@@ -11,8 +11,8 @@ JDialect::JDialect(MLIRContext *context)
 
   // 2. Manually register your Operations here
   addOperations<
-      PlusOp,
-      FoldOp
+      PlusOp
+     // TODO: Next FoldOp
       /* Add more J verbs here */
   >();
 }

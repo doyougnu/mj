@@ -1,0 +1,18 @@
+CompileFlags:
+  Add:
+    -I/nix/store/s43dna0ggjqaw1l45mws7ydvy5jdkm2l-mlir-21.1.8/include
+    -I/nix/store/r0jc54x69jwyhw7svv2h66aa7ngklx5q-llvm-21.1.8/include
+    -std=c++20
+
+Index:
+  StandardLibrary: Yes
+
+InlayHints:
+  Enabled: Yes
+
+CompileFlags:
+  Add: [...]
+
+PathMappings:
+  - Local: /store/Programming/c++/mj
+    Remote: /home/doyougnu/programming/c++/mj

@@ -33,11 +33,38 @@
           ];
 
           shellHook = ''
-            export MLIR_DIR=${llvm.mlir}
-            export LLVM_DIR=${llvm.llvm}
-            export LLVM_TABLEGEN_EXE=${llvm.tblgen}
-            echo "--- J-MLIR Development Shell ---"
-            echo "MLIR Version: $(mlir-tblgen --version | grep version)"
+          export MLIR_INC_DIR="${llvm.mlir}/include"
+          export LLVM_INC_DIR="${llvm.llvm}/include"
+
+          # Path to the libraries
+          export MLIR_LIB_DIR="${llvm.mlir}/lib"
+
+          export MLIR_INCLUDE_DIRS=${llvm.mlir}/include
+          export LLVM_INCLUDE_DIRS=${llvm.llvm}/include
+          export LLVM_TABLEGEN_EXE=${llvm.tblgen}
+          echo "--- J-MLIR Development Shell ---"
+          echo "MLIR Version: $(mlir-tblgen --version | grep version)"
+          # Write .clangd so eglot picks up includes without needing a build
+          cat > .clangd <<EOF
+          CompileFlags:
+            Add:
+              -I${pkgs.llvmPackages.mlir}/include
+              -I${pkgs.llvmPackages.llvm}/include
+              -std=c++20
+
+          Index:
+            StandardLibrary: Yes
+
+          InlayHints:
+            Enabled: Yes
+
+          CompileFlags:
+            Add: [...]
+
+          PathMappings:
+            - Local: /store/Programming/c++/mj
+              Remote: /home/doyougnu/programming/c++/mj
+          EOF
           '';
         };
       });

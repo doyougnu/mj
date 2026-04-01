@@ -5,10 +5,13 @@
 
 namespace j {
 class JDialect : public mlir::Dialect {
-public:
-  explicit JDialect(mlir::MLIRContext *ctx);
-  static llvm::StringRef getDialectNamespace() { return "j"; }
-};
+
+  public:
+    explicit JDialect(mlir::MLIRContext *ctx);
+    static llvm::StringRef getDialectNamespace() { return "j"; }
+
+    void initialize();
+  };
 } // namespace j
 
 #endif
