@@ -1,7 +1,7 @@
 CompileFlags:
   Add:
-    -I/nix/store/s43dna0ggjqaw1l45mws7ydvy5jdkm2l-mlir-21.1.8/include
-    -I/nix/store/r0jc54x69jwyhw7svv2h66aa7ngklx5q-llvm-21.1.8/include
+    -I/nix/store/a46bnd94b1zmqdnx3dzjyrmacvvpwdnd-mlir-21.1.8-dev/include
+    -I/nix/store/v4va7gllsi2rk5lashq0kjm3sj5vpifm-llvm-21.1.8-dev/include
     -std=c++20
 
 Index:

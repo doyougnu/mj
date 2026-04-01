@@ -9,15 +9,12 @@ using namespace j;
 JDialect::JDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<JDialect>()) {
 
-  // 2. Manually register your Operations here
-  addOperations<
-      PlusOp
-     // TODO: Next FoldOp
-      /* Add more J verbs here */
-  >();
+  initialize();
 }
 
 // Optional: If you want to use standard MLIR types (like f64)
 void JDialect::initialize() {
-    // Custom type initialization would go here
+  addOperations< ConstantOp,
+                PlusOp
+                >();
 }

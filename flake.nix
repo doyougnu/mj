@@ -10,7 +10,6 @@
     utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        # Use LLVM 17 or 18 (latest stable MLIR features)
         llvm = pkgs.llvmPackages;
       in
       {
@@ -32,15 +31,9 @@
             libxml2
           ];
 
+          MLIR_INC_DIR = "${llvm.mlir.dev}/include";
+
           shellHook = ''
-          export MLIR_INC_DIR="${llvm.mlir}/include"
-          export LLVM_INC_DIR="${llvm.llvm}/include"
-
-          # Path to the libraries
-          export MLIR_LIB_DIR="${llvm.mlir}/lib"
-
-          export MLIR_INCLUDE_DIRS=${llvm.mlir}/include
-          export LLVM_INCLUDE_DIRS=${llvm.llvm}/include
           export LLVM_TABLEGEN_EXE=${llvm.tblgen}
           echo "--- J-MLIR Development Shell ---"
           echo "MLIR Version: $(mlir-tblgen --version | grep version)"
@@ -48,8 +41,8 @@
           cat > .clangd <<EOF
           CompileFlags:
             Add:
-              -I${pkgs.llvmPackages.mlir}/include
-              -I${pkgs.llvmPackages.llvm}/include
+              -I${llvm.mlir.dev}/include
+              -I${llvm.llvm.dev}/include
               -std=c++20
 
           Index:

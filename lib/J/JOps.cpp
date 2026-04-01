@@ -4,6 +4,41 @@
 
 using namespace j;
 
+/*************************** Constants ****************************************/
+void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       mlir::DenseElementsAttr value) {
+  state.addAttribute("value", value);
+  state.addTypes(value.getType());
+}
+
+void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       mlir::Type result, mlir::DenseElementsAttr value) {
+  // 1. Add the "value" attribute.
+  // This stores the actual array data (e.g., [1, 2, 3]).
+  state.addAttribute("value", value);
+
+  // 2. Set the result type.
+  // In J, this would typically be a RankedTensorType
+  // representing the shape and element type (e.g., tensor<3xf64>).
+  state.addTypes(result);
+}
+
+void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       double value) {
+ // 1. Create a Float Attribute to store the actual double value
+    auto dataType = builder.getF64Type();
+    auto dataAttr = builder.getFloatAttr(dataType, value);
+
+    // 2. Add the attribute to the operation state.
+    // "value" is the name we'll use to refer to this in C++
+    state.addAttribute("value", dataAttr);
+
+    // 3. Set the result type of this operation
+    // In MLIR, every SSA value must have a type.
+    state.addTypes(dataType);
+}
+
+/*************************** BinOps *******************************************/
 /**
  * The build method is called by your JParser.
  * It populates the OperationState which MLIR uses to create the actual Op.

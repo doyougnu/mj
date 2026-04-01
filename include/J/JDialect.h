@@ -7,7 +7,7 @@ namespace j {
 class JDialect : public mlir::Dialect {
 
   public:
-    explicit JDialect(mlir::MLIRContext *ctx);
+    explicit JDialect(mlir::MLIRContext* ctx);
     static llvm::StringRef getDialectNamespace() { return "j"; }
 
     void initialize();

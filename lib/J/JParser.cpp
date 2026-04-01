@@ -54,8 +54,7 @@ mlir::Value JParser::parseDyad(mlir::Value lhs) {
     // J Verbs are right-associative, so we use the same BP (10)
     mlir::Value rhs = parseExpr(10);
 
-    // This is where your Pure C++ Op is created!
-    return builder.create<j::PlusOp>(builder.getUnknownLoc(), lhs, rhs);
+    return builder.create<j::PlusOp>(builder.getUnknownLoc(), lhs, rhs)->getResult(0);
 }
 
 mlir::Value JParser::parseAdv(mlir::Value lhs) {
