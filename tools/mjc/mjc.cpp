@@ -12,6 +12,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <J/JLexer.h>
 
 // J Dialect and friends
 #include "J/JDialect.h"
@@ -42,18 +43,22 @@ int main(int argc, char **argv) {
     }
     sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
 
-    // 3. Parse the J code into an MLIR Module
-    // Assuming your JParser takes a Context and SourceMgr
-    j::JParser parser(context, sourceMgr);
-    mlir::OwningOpRef<mlir::ModuleOp> module = parser.parse();
+    mlir::OpBuilder tempBuilder(&context);
+    mlir::ModuleOp module = mlir::ModuleOp::create(tempBuilder.getUnknownLoc());
+    mlir::OpBuilder builder(module.getBodyRegion());
 
-    if (!module) {
+    // initialize the lexer and parser
+    j::JLexer lexer(sourceMgr);
+    j::JParser parser(builder, lexer);
+
+    // kickoff
+    if (mlir::failed(parser.parse())) {
         llvm::errs() << "Error: Failed to parse J source.\n";
         return 1;
     }
 
     // 4. Print the generated MLIR to stdout
-    module->print(llvm::outs());
+    module.dump(); // ->print(llvm::outs());
 
     return 0;
 }

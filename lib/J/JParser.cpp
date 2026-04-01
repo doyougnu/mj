@@ -1,11 +1,10 @@
 #include "J/JParser.h"
 #include "J/JOps.h"
+#include "J/JLexer.h"
+
 #include "mlir/Dialect/Arith/IR/Arith.h"
 
 using namespace j;
-
-JParser::JParser(mlir::MLIRContext *ctx, std::vector<Token> tokens)
-    : tokens(tokens), builder(ctx) {}
 
 const JParser::PrattRule& JParser::getRule(Kind kind) {
     static const PrattRule table[] = {
@@ -15,6 +14,22 @@ const JParser::PrattRule& JParser::getRule(Kind kind) {
         /* EOF */    { nullptr,              nullptr,            0 }
     };
     return table[static_cast<int>(kind)];
+}
+
+// In JParser.cpp
+mlir::LogicalResult JParser::parse() {
+    while (peek().kind != Token::EOF_Token) {
+        // Start a new expression with 0 binding power
+        auto result = parseExpr(0);
+
+        if (!result) return mlir::failure();
+
+        // Handle optional separators like Newline or Semicolon
+        if (peek().kind == Token::Newline || peek().kind == Token::Semicolon) {
+            consume();
+        }
+    }
+    return mlir::success();
 }
 
 mlir::Value JParser::parseExpr(int min_bp) {
@@ -32,44 +47,33 @@ mlir::Value JParser::parseExpr(int min_bp) {
     return lhs;
 }
 
-// --- Implementation of Nuds and Leds ---
-
 mlir::Value JParser::parseNoun() {
     // For now, let's just emit an arith.constant for a double
-    double val = std::stod(last_token.text);
+    double val;
+    last_token.text.getAsDouble(val);
+    // TODO: handle if getAsDouble fails
     auto type = builder.getF64Type();
     return builder.create<mlir::arith::ConstantOp>(
         builder.getUnknownLoc(), type, builder.getF64FloatAttr(val));
 }
 
 mlir::Value JParser::parseMonad() {
-    std::string op = last_token.text;
+  llvm::StringRef op = last_token.text;
     mlir::Value rhs = parseExpr(10); // Right-associative
     // return builder.create<j::NegateOp>(..., rhs);
     return rhs;
 }
 
 mlir::Value JParser::parseDyad(mlir::Value lhs) {
-    std::string op = last_token.text;
-    // J Verbs are right-associative, so we use the same BP (10)
-    mlir::Value rhs = parseExpr(10);
+  llvm::StringRef op = last_token.text;
+  // J Verbs are right-associative, so we use the same BP (10)
+  mlir::Value rhs = parseExpr(10);
 
-    return builder.create<j::PlusOp>(builder.getUnknownLoc(), lhs, rhs)->getResult(0);
+  return builder.create<j::PlusOp>(builder.getUnknownLoc(), lhs, rhs)->getResult(0);
 }
 
 mlir::Value JParser::parseAdv(mlir::Value lhs) {
     // Adverbs (like /) modify the verb to their left
     // In MLIR, this might produce a "Rank-Reduced" operation
     return lhs;
-}
-
-// --- Helpers ---
-Token JParser::consume() {
-    if (pos < tokens.size()) return last_token = tokens[pos++];
-    return {Kind::EOF_TK, ""};
-}
-
-Token JParser::peek() {
-    if (pos < tokens.size()) return tokens[pos];
-    return {Kind::EOF_TK, ""};
 }
