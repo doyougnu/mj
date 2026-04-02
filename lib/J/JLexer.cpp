@@ -1,4 +1,5 @@
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 
 #include "J/JLexer.h"
 
@@ -7,52 +8,94 @@
 using namespace j;
 
 JLexer::JLexer(llvm::SourceMgr &sm) : sourceMgr(sm) {
-        // Get a pointer to the start of the main buffer
-        auto bufferID = sourceMgr.getMainFileID();
-        curPtr = sourceMgr.getMemoryBuffer(bufferID)->getBufferStart();
-    }
+  // Get a pointer to the start of the main buffer
+  auto bufferID = sourceMgr.getMainFileID();
+  curPtr = sourceMgr.getMemoryBuffer(bufferID)->getBufferStart();
+  endPtr = sourceMgr.getMemoryBuffer(bufferID)->getBufferEnd();
+}
 
 Token JLexer::getNextToken() {
-   // If there is a peeked token waiting, take it and clear the cache
-    if (lookahead.has_value()) {
-        Token t = *lookahead;
-        lookahead.reset();
-        return t;
-    }
-    // Otherwise, just scan a fresh one
-    return scanToken();
+  // If there is a peeked token waiting, take it and clear the cache
+  if (lookahead.has_value()) {
+    Token t = *lookahead;
+    lookahead.reset();
+    return t;
+  }
+  // Otherwise, just scan a fresh one
+  return scanToken();
+}
+
+void JLexer::skipWhitespace() {
+  while (isspace(*curPtr)) {
+    ++curPtr;
+  }
+  return;
+}
+
+Token JLexer::scanNumber() {
+  const char *start = curPtr;
+  llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
+  while (isdigit(*++curPtr))
+    ;
+
+  return {Token::Noun, llvm::StringRef(start, curPtr - start), loc};
+}
+
+Token JLexer::scanPrimitive() {
+  const char *start = curPtr;
+  const llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
+  const char base = *curPtr++;
+
+  if (*curPtr == '.' || *curPtr == ':') {
+    curPtr++; // move pointer to include it
+  }
+
+  llvm::StringRef op = llvm::StringRef(start, curPtr - start);
+  const Token::Kind tok = dispatch(op);
+  return {tok, llvm::StringRef(start, curPtr - start), loc};
+}
+
+Token JLexer::scanIdentifier() {
+  const char *start = curPtr;
+  while (isalpha(*++curPtr))
+    ;
+  const llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
+  return {Token::Ident, llvm::StringRef(start, curPtr - start), loc};
 }
 
 Token JLexer::scanToken() {
-  // 1. Skip whitespace
-  while (isspace(*curPtr)) ++curPtr;
+  llvm::SMLoc loc = llvm::SMLoc::getFromPointer(curPtr);
+  Token result = {Token::Error, "Lexer: Something bad", loc};
 
-  // 2. Check for End of File
-  if (*curPtr == '\0') {
-    return {Token::EOF_Token, "EOF", llvm::SMLoc::getFromPointer(curPtr)};
-  }
+  skipWhitespace();
+  if (curPtr >= endPtr)
+    return {Token::Kind::EndOfFile, "", loc};
 
-  const char* startPtr = curPtr;
-  llvm::SMLoc loc = llvm::SMLoc::getFromPointer(startPtr);
+  char c = *curPtr;
 
-  // 3. Simple J-style logic (Nouns vs Verbs)
-  if (isdigit(*curPtr)) {
-    while (isdigit(*++curPtr)); // Consume numbers
-    return {Token::Noun, llvm::StringRef(startPtr, curPtr - startPtr), loc};
-  }
+  if (isdigit(c)) // TODO: negatives || (c == '_' && isdigit(peekNext())))
+    result = scanNumber();
 
-  if (ispunct(*curPtr)) {
-    char op = *curPtr++;
-    // In J, '+' is a verb, '/' might be an adverb
-    if (op == '+' || op == '*' || op == '-') {
-      return {Token::Verb, llvm::StringRef(startPtr, 1), loc};
-    }
-    if (op == '/') {
-      return {Token::Adverb, llvm::StringRef(startPtr, 1), loc};
-    }
-  }
+  if (ispunct(c))
+    result = scanPrimitive();
 
-  return {Token::Error, "Unknown", loc};
+  if (isalpha(c))
+    result = scanIdentifier();
+
+  return result;
+}
+
+Token::Kind JLexer::dispatch(llvm::StringRef c) const {
+  return llvm::StringSwitch<Token::Kind>(c)
+      .StartsWith("+:", Token::PlusColon)
+      .StartsWith("+.", Token::PlusDot)
+      .StartsWith("=.", Token::EqualDot)
+      .StartsWith("=:", Token::EqualColon)
+      .StartsWith("\\", Token::Backslash)
+      .StartsWith("\n", Token::Newline)
+      .StartsWith("/", Token::Slash)
+      .StartsWith(";", Token::Semicolon)
+      .StartsWith("+", Token::Plus);
 }
 
 Token JLexer::peek() {
