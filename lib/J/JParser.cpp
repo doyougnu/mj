@@ -42,7 +42,7 @@ mlir::LogicalResult JParser::parse() {
       return mlir::failure();
 
     // Handle optional separators like Newline or Semicolon
-    if (peek().kind == Token::Newline || peek().kind == Token::Semicolon) {
+    if (peek().kind == Token::Newline) {
       consume();
     }
   }
@@ -58,8 +58,8 @@ mlir::Value JParser::parseExpr(int min_bp) {
   mlir::Value lhs = (this->*nud_fn)();
 
   while (min_bp < getRule(peek().kind).bp) {
-    t = consume();
-    auto led_fn = getRule(t.kind).led;
+    Token next = consume();
+    auto led_fn = getRule(next.kind).led;
     lhs = (this->*led_fn)(lhs);
   }
   return lhs;
@@ -68,7 +68,9 @@ mlir::Value JParser::parseExpr(int min_bp) {
 mlir::Value JParser::parseNoun() {
   // For now, let's just emit an arith.constant for a double
   double val;
-  last_token.text.getAsDouble(val);
+  currentToken.text.getAsDouble(val);
+  llvm::outs() << "CurrentTOk:" << currentToken.text << "\n";
+
   // TODO: handle if getAsDouble fails
   auto type = builder.getF64Type();
   return builder.create<mlir::arith::ConstantOp>(
@@ -76,7 +78,8 @@ mlir::Value JParser::parseNoun() {
 }
 
 mlir::Value JParser::parseMonad() {
-  llvm::StringRef op = last_token.text;
+  llvm::StringRef op = currentToken.text;
+  llvm::outs() << "parse monad: " << currentToken.text << "\n";
   mlir::Value rhs = parseExpr(10); // Right-associative
   // TODO: more monads
   // return builder.create<j::NegateOp>(..., rhs);
@@ -84,7 +87,7 @@ mlir::Value JParser::parseMonad() {
 }
 
 mlir::Value JParser::parseDyad(mlir::Value lhs) {
-  llvm::StringRef op = last_token.text;
+  llvm::StringRef op = currentToken.text;
   // J Verbs are right-associative, so we use the same BP (10)
   mlir::Value rhs = parseExpr(10);
 

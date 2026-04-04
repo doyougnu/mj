@@ -14,9 +14,9 @@ namespace j {
 
 class JParser {
 public:
-  JParser(mlir::OpBuilder &b, j::JLexer &l) : builder(b), lexer(l) {
+  JParser(mlir::OpBuilder &b, j::JLexer &l) : builder(b), lexer(std::move(l)) {
     currentToken = lexer.getNextToken();
-    last_token = currentToken;
+    // last_token = currentToken;
   }
 
   // The entry point to get a single MLIR Value (the result of the J expr)
@@ -35,10 +35,10 @@ private:
   };
 
   mlir::OpBuilder &builder;
-  j::JLexer &lexer;
+  j::JLexer &&lexer;
 
   j::Token currentToken;
-  j::Token last_token;
+  // j::Token last_token;
 
   using Kind = j::Token::Kind;
   static const PrattRule &getRule(Kind kind);
@@ -51,7 +51,11 @@ private:
   mlir::Value parseAdv(mlir::Value lhs);  // Led: handles +/
 
   // Helpers
-  Token consume() { return lexer.getNextToken(); };
+  Token consume() {
+    const Token t = lexer.getNextToken();
+    currentToken = t;
+    return t;
+  };
   Token peek() const { return lexer.peek(); };
 };
 

@@ -1,6 +1,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 #include "J/JLexer.h"
 
 #include <cctype>
@@ -81,7 +83,9 @@ Token JLexer::scanToken() {
 
   if (isalpha(c))
     result = scanIdentifier();
-
+  // START: the lexer is working, the parser is not and is translating every
+  // number to the first number in the stream
+  llvm::outs() << "Lexer result:" << result.text << "\n";
   return result;
 }
 

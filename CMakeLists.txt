@@ -10,11 +10,18 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
       ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
 
+if(NOT CMAKE_BUILD_TYPE) # if the build type is not passed on the command line
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+endif()
+
+# Force -O0 for Debug builds
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -D_FORTIFY_SOURCE=2" CACHE STRING "Debug flags" FORCE)
+
 # 1. Locate Packages
 find_package(MLIR REQUIRED CONFIG)
 find_package(LLVM REQUIRED CONFIG)
-message(STATUS "MLIR Include Dirs: ${MLIR_INCLUDE_DIRS}")
-message(STATUS "LLVM Include Dirs: ${LLVM_INCLUDE_DIRS}")
 include_directories("${MLIR_INCLUDE_DIRS}")
 include_directories("${LLVM_INCLUDE_DIRS}")
 

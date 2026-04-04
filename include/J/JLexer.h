@@ -29,7 +29,7 @@ struct Token {
 
 class JLexer {
 public:
-  JLexer(llvm::SourceMgr &sm);
+  explicit JLexer(llvm::SourceMgr &sm);
 
   Token getNextToken();
   Token peek();
@@ -42,7 +42,7 @@ private:
   Token::Kind dispatch(llvm::StringRef c) const;
   void skipWhitespace();
 
-  llvm::SourceMgr &sourceMgr;
+  const llvm::SourceMgr &sourceMgr;
   std::optional<Token> lookahead;
   const char *curPtr;
   const char *endPtr;

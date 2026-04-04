@@ -21,6 +21,7 @@
             llvm.clang
             llvm.lld
             llvm.tblgen
+            gdb
           ];
 
           buildInputs = with pkgs; [
@@ -35,6 +36,8 @@
 
           shellHook = ''
           export LLVM_TABLEGEN_EXE=${llvm.tblgen}
+          export CC=clang
+          export CXX=clang++
           echo "--- J-MLIR Development Shell ---"
           echo "MLIR Version: $(mlir-tblgen --version | grep version)"
           # Write .clangd so eglot picks up includes without needing a build
