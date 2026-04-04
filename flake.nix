@@ -32,6 +32,8 @@
             libxml2
           ];
 
+          hardeningDisable = [ "fortify" "fortify3" ];
+
           MLIR_INC_DIR = "${llvm.mlir.dev}/include";
 
           shellHook = ''

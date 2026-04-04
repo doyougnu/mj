@@ -16,8 +16,7 @@ if(NOT CMAKE_BUILD_TYPE) # if the build type is not passed on the command line
     "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif()
 
-# Force -O0 for Debug builds
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -D_FORTIFY_SOURCE=2" CACHE STRING "Debug flags" FORCE)
+
 
 # 1. Locate Packages
 find_package(MLIR REQUIRED CONFIG)
@@ -66,3 +65,6 @@ target_link_libraries(mjc PRIVATE
     MLIROptLib
     MLIRSupport
 )
+
+# Force -O0 for Debug builds
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" CACHE STRING "Debug flags" FORCE)
