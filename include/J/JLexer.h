@@ -9,6 +9,13 @@ namespace j {
 struct Token {
   enum Kind {
     Noun,
+    Int,
+    Float,
+    Tilde,
+    At,
+    Amp,
+    LPrn,
+    RPrn,
     EndOfFile,
     Plus,
     PlusDot,
