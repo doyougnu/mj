@@ -1,9 +1,8 @@
-#include "mlir/IR/AsmState.h"
-// Dialect Headers
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/AsmState.h"
 
 // Standard MLIR Headers
 #include "mlir/IR/BuiltinOps.h"
@@ -12,13 +11,15 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
-#include <J/JLexer.h>
+
+#include <iostream>
 #include <memory>
-#include <source_location>
 
 // J Dialect and friends
 #include "J/JDialect.h"
+#include "J/JLexer.h"
 #include "J/JParser.h"
+#include "J/JPrinter.h"
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -58,11 +59,16 @@ int main(int argc, char **argv) {
       std::move(lexer)}; // std::make_unique<j::JParser>(builder, lexer);
 
   // kickoff
+
   auto ast = parser.parse();
   if (!ast) {
     llvm::errs() << "Error: Failed to parse J source.\n";
     return 1;
   }
+
+  llvm::raw_ostream &output = llvm::outs();
+  auto printer = j::JPrinter{output};
+  printer.print(*ast);
 
   // START: need to define the AST -> MLIR pass, do the printer first
   // 4. Print the generated MLIR to stdout

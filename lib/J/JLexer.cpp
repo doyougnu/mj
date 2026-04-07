@@ -53,6 +53,7 @@ Token JLexer::scanPrimitive() {
   }
 
   llvm::StringRef op = llvm::StringRef(start, curPtr - start);
+  // TODO: bug here, we don't dispatch over . and :, add tokens
   const Token::Kind tok = dispatch(op);
   return {tok, llvm::StringRef(start, curPtr - start), loc};
 }
@@ -83,7 +84,6 @@ Token JLexer::scanToken() {
 
   if (isalpha(c))
     result = scanIdentifier();
-  llvm::outs() << "Lexer result:" << result.text << "\n";
   return result;
 }
 

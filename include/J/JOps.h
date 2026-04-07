@@ -1,34 +1,33 @@
 #ifndef J_JOPS_H
 #define J_JOPS_H
 
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace j {
 
 /*************************** Constants ***************************************/
-class ConstantOp : public mlir::Op<
-                     ConstantOp,
-                     /// The ConstantOp takes zero input operands.
-                     mlir::OpTrait::ZeroOperands,
-                     /// The ConstantOp returns a single result.
-                     mlir::OpTrait::OneResult,
-                     /// We also provide a utility `getType` accessor that
-                     /// returns the TensorType of the single result.
-                     mlir::OpTrait::OneTypedResult<mlir::TensorType>::Impl> {
+class ConstantOp
+    : public mlir::Op<ConstantOp,
+                      /// The ConstantOp takes zero input operands.
+                      mlir::OpTrait::ZeroOperands,
+                      /// The ConstantOp returns a single result.
+                      mlir::OpTrait::OneResult,
+                      /// We also provide a utility `getType` accessor that
+                      /// returns the TensorType of the single result.
+                      mlir::OpTrait::OneTypedResult<mlir::TensorType>::Impl> {
 
 public:
   // yes this is redundant hence tablegen
-  using OpBase = mlir::Op<ConstantOp,
-                          mlir::OpTrait::ZeroOperands,
-                          mlir::OpTrait::OneResult,
-                          mlir::OpTrait::OneTypedResult<mlir::TensorType>::Impl>;
+  using OpBase =
+      mlir::Op<ConstantOp,
+               mlir::OpTrait::ZeroOperands,
+               mlir::OpTrait::OneResult,
+               mlir::OpTrait::OneTypedResult<mlir::TensorType>::Impl>;
   // 2. Use the shorthand to inherit the constructors
   using OpBase::OpBase;
-
 
   /// Provide the unique name for this operation. MLIR will use this to register
   /// the operation and uniquely identify it throughout the system. The name
@@ -40,8 +39,8 @@ public:
   // implementation we add the "value" attribute, here we tell mlir that that
   // attribute exists
   static llvm::ArrayRef<llvm::StringRef> getAttributeNames() {
-      static llvm::StringRef attrNames[] = {llvm::StringRef("value")};
-      return llvm::ArrayRef(attrNames);
+    static llvm::StringRef attrNames[] = {llvm::StringRef("value")};
+    return llvm::ArrayRef(attrNames);
   }
 
   /// Return the value of the constant by fetching it from the attribute.
@@ -61,16 +60,18 @@ public:
   /// operations. This state is a collection of all of the discrete elements
   /// that an operation may contain.
   /// Build a constant with the given return type and `value` attribute.
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    mlir::Type result, mlir::DenseElementsAttr value);
+  static void build(mlir::OpBuilder &builder,
+                    mlir::OperationState &state,
+                    mlir::Type result,
+                    mlir::DenseElementsAttr value);
   /// Build a constant and reuse the type from the given 'value'.
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder,
+                    mlir::OperationState &state,
                     mlir::DenseElementsAttr value);
   /// Build a constant by broadcasting the given 'value'.
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    double value);
+  static void
+  build(mlir::OpBuilder &builder, mlir::OperationState &state, double value);
 };
-
 
 /*************************** BinOps *******************************************/
 /// The Plus operation (+) in J.
@@ -78,45 +79,43 @@ public:
 /// It supports "Rank Agreement," but for this C++ header, we define
 /// the interface for MLIR to track the operation.
 class PlusOp : public mlir::Op<PlusOp, // PlusOp because CRTP
-    mlir::OpTrait::AtLeastNOperands<2>::Impl,
-    mlir::OpTrait::OneResult,
-    mlir::OpTrait::AlwaysSpeculatableImplTrait,
-    mlir::ConditionallySpeculatable::Trait,
-    mlir::MemoryEffectOpInterface::Trait> {
+                               mlir::OpTrait::AtLeastNOperands<2>::Impl,
+                               mlir::OpTrait::OneResult,
+                               mlir::OpTrait::AlwaysSpeculatableImplTrait,
+                               mlir::ConditionallySpeculatable::Trait,
+                               mlir::MemoryEffectOpInterface::Trait> {
 public:
-    // Inherit constructors from the base Op class
-      using OpBase = mlir::Op<PlusOp,
-        mlir::OpTrait::AtLeastNOperands<2>::Impl,
-        mlir::OpTrait::OneResult,
-        mlir::OpTrait::AlwaysSpeculatableImplTrait,
-        mlir::ConditionallySpeculatable::Trait,
-        mlir::MemoryEffectOpInterface::Trait>;
+  // Inherit constructors from the base Op class
+  using OpBase = mlir::Op<PlusOp,
+                          mlir::OpTrait::AtLeastNOperands<2>::Impl,
+                          mlir::OpTrait::OneResult,
+                          mlir::OpTrait::AlwaysSpeculatableImplTrait,
+                          mlir::ConditionallySpeculatable::Trait,
+                          mlir::MemoryEffectOpInterface::Trait>;
 
-    // 2. Use the shorthand to inherit the constructors
-    using OpBase::OpBase;
+  // shorthand to inherit the constructors
+  using OpBase::OpBase;
+  static llvm::StringRef getOperationName() { return "j.plus"; }
+  static llvm::ArrayRef<llvm::StringRef> getAttributeNames() { return {}; }
 
-    // The unique name for this operation in the J dialect
-    static llvm::StringRef getOperationName() { return "j.plus"; }
-
-    static llvm::ArrayRef<llvm::StringRef> getAttributeNames() { return {}; }
-
-    void getEffects(llvm::SmallVectorImpl<mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>> &effects) {
-    // We are telling mlir that plus can allocate
+  void getEffects(llvm::SmallVectorImpl<mlir::SideEffects::EffectInstance<
+                      mlir::MemoryEffects::Effect>> &effects) {
+    // plus can allocate
     effects.emplace_back(mlir::MemoryEffects::Allocate::get());
-   }
+  }
 
-    static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                      mlir::Value lhs, mlir::Value rhs);
+  static void build(mlir::OpBuilder &builder,
+                    mlir::OperationState &state,
+                    mlir::Value lhs,
+                    mlir::Value rhs);
 
-    // Helpers to access operands
-    mlir::Value getLHS() { return getOperation()->getOperand(0); }
-    mlir::Value getRHS() { return getOperation()->getOperand(1); }
+  // Helpers to access operands
+  mlir::Value getLHS() { return getOperation()->getOperand(0); }
+  mlir::Value getRHS() { return getOperation()->getOperand(1); }
 
-    // Mandatory: Logical validation of the operation
-    mlir::LogicalResult verify();
+  // Mandatory: Logical validation of the operation
+  mlir::LogicalResult verify();
 };
-
-  // TODO: You can add more Ops here (e.g., NegateOp, ShapeOp) as your compiler grows.
 
 } // namespace j
 

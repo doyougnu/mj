@@ -6,13 +6,13 @@
 
 #include "J/Ast.h"
 
-using namespace j;
+namespace j {
 
-struct Printer {
+struct JPrinter {
   llvm::raw_ostream &os;
   int indent = 0;
 
-  explicit Printer(llvm::raw_ostream &os = llvm::outs()) : os(os) {}
+  explicit JPrinter(llvm::raw_ostream &os = llvm::outs()) : os(os) {}
 
   // this is the injector to the printer
   void print(const ExprPtr &expr) { std::visit(*this, expr->kind); }
@@ -155,5 +155,5 @@ private:
     }
   }
 };
-
+} // end namespace j
 #endif // J_PRINTER_H

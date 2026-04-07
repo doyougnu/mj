@@ -200,7 +200,8 @@ std::optional<Word> JParser::parseSentence() {
   // returns true if a reduction was made
   auto reduce = [&]() -> bool {
     int n = stack.size();
-    bool result = n >= 2; // build in the stack size check
+    if (n < 2)
+      return false;
 
     WordClass w0 = top(0).wc; // rightmost
     WordClass w1 = top(1).wc;
@@ -307,7 +308,6 @@ std::optional<Word> JParser::parseSentence() {
       push({wc, std::move(inner.value().node)});
     } else {
       auto node = parsePrimary(); // lex one token into a node
-      // START: implement isVerb
       WordClass wc = isVerb(node.value()) ? WordClass::Verb : WordClass::Noun;
       push({wc, std::move(node.value())});
     }
