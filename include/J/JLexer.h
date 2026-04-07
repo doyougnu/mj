@@ -8,27 +8,40 @@ namespace j {
 
 struct Token {
   enum Kind {
-    Noun,
+    // nums
     Int,
     Float,
+    // prims
+    Plus,
+    Minus,
+    Star,
+    Percent,
+    Caret,
+    Lt,
+    Gt,
+    Bar,
+    Hash,
+    Iota,
+    Eq,
+    // idents
+    Ident,
+    // adverbs
     Tilde,
+    Slash,
+    Backslash,
+    // conjunctions
     At,
     Amp,
     LPrn,
     RPrn,
+    // special
     EndOfFile,
-    Plus,
-    PlusDot,
-    PlusColon,
-    EqualDot,
-    EqualColon,
-    Slash,
-    Backslash,
     Newline,
     Semicolon,
     Error,
-    Ident
+
   };
+
   Kind kind;
   llvm::StringRef text;
   llvm::SMLoc location;
@@ -40,6 +53,8 @@ public:
 
   Token getNextToken();
   Token peek();
+  const char *curPtr;
+  const char *endPtr;
 
 private:
   Token scanToken();
@@ -51,8 +66,6 @@ private:
 
   const llvm::SourceMgr &sourceMgr;
   std::optional<Token> lookahead;
-  const char *curPtr;
-  const char *endPtr;
 };
 
 } // namespace j

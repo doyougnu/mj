@@ -39,8 +39,8 @@ Token JLexer::scanNumber() {
   llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
   while (isdigit(*++curPtr))
     ;
-
-  return {Token::Noun, llvm::StringRef(start, curPtr - start), loc};
+  // TODO: implement floats
+  return {Token::Int, llvm::StringRef(start, curPtr - start), loc};
 }
 
 Token JLexer::scanPrimitive() {
@@ -83,23 +83,32 @@ Token JLexer::scanToken() {
 
   if (isalpha(c))
     result = scanIdentifier();
-  // START: the lexer is working, the parser is not and is translating every
-  // number to the first number in the stream
   llvm::outs() << "Lexer result:" << result.text << "\n";
   return result;
 }
 
 Token::Kind JLexer::dispatch(llvm::StringRef c) const {
   return llvm::StringSwitch<Token::Kind>(c)
-      .StartsWith("+:", Token::PlusColon)
-      .StartsWith("+.", Token::PlusDot)
-      .StartsWith("=.", Token::EqualDot)
-      .StartsWith("=:", Token::EqualColon)
+      .StartsWith("+", Token::Plus)
+      .StartsWith("_", Token::Minus)
+      .StartsWith("*", Token::Star)
+      .StartsWith("%", Token::Percent)
+      .StartsWith("^", Token::Caret)
+      .StartsWith("<", Token::Lt)
+      .StartsWith(">", Token::Gt)
+      .StartsWith("=", Token::Eq)
+      .StartsWith("-", Token::Bar)
+      .StartsWith("#", Token::Hash)
+      .StartsWith("i.", Token::Iota)
+      .StartsWith("~", Token::Tilde)
+      .StartsWith("@", Token::At)
+      .StartsWith("&", Token::Amp)
+      .StartsWith("(", Token::LPrn)
+      .StartsWith(")", Token::RPrn)
       .StartsWith("\\", Token::Backslash)
       .StartsWith("\n", Token::Newline)
       .StartsWith("/", Token::Slash)
-      .StartsWith(";", Token::Semicolon)
-      .StartsWith("+", Token::Plus);
+      .StartsWith(";", Token::Semicolon);
 }
 
 Token JLexer::peek() {

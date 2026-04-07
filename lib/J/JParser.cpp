@@ -1,103 +1,332 @@
 #include "J/JParser.h"
+#include "J/Ast.h"
 #include "J/JLexer.h"
 #include "J/JOps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include <cstdint>
+#include <mlir/IR/Diagnostics.h>
+#include <mlir/IR/Location.h>
+#include <mlir/Support/LLVM.h>
+#include <string>
 
 using namespace j;
 
-const JParser::PrattRule &JParser::getRule(Kind kind) {
-  static const PrattRule table[] = {
-      /* Token Kind          | Prefix (Nud)         | Infix (Led)          | BP
-       */
-      /* ------------------- | -------------------- | -------------------- | --
-       */
-      {Kind::Noun, &JParser::parseNoun, nullptr, 0},
-      {Kind::EndOfFile, nullptr, nullptr, 0},
-
-      /* Plus Family */
-      {Kind::Plus, &JParser::parseMonad, &JParser::parseDyad, 10},      // +
-      {Kind::PlusDot, &JParser::parseMonad, &JParser::parseDyad, 10},   // +.
-      {Kind::PlusColon, &JParser::parseMonad, &JParser::parseDyad, 10}, // +:
-
-      /* Assignment (Global and Local) */
-      // {Kind::EqualDot, nullptr, &JParser::parseAssign, 5},   // =.
-      // {Kind::EqualColon, nullptr, &JParser::parseAssign, 5}, // =:
-
-      /* Adverbs (Bind tighter than verbs) */
-      {Kind::Slash, nullptr, &JParser::parseAdv, 30},     // /
-      {Kind::Backslash, nullptr, &JParser::parseAdv, 30}, // \
-
-  };
-  return table[static_cast<int>(kind)];
-}
-
-// In JParser.cpp
-mlir::LogicalResult JParser::parse() {
-  while (peek().kind != Token::EndOfFile) {
-    // Start a new expression with 0 binding power
-    auto result = parseExpr(0);
-
-    if (!result)
-      return mlir::failure();
-
-    // Handle optional separators like Newline or Semicolon
-    if (peek().kind == Token::Newline) {
-      consume();
-    }
+WordClass classify(const j::Token &tok) {
+  switch (tok.kind) {
+  case Token::Int:
+  case Token::Float:
+  case Token::Ident:
+    return WordClass::Noun;
+  case Token::Slash:
+  case Token::Backslash:
+  case Token::Tilde:
+    return WordClass::Adverb;
+  case Token::At:
+  case Token::Amp:
+    return WordClass::Conj;
+  case Token::LPrn:
+    return WordClass::LPrn;
+  case Token::RPrn:
+    return WordClass::RPrn;
+  default:
+    return WordClass::Verb;
   }
-  return mlir::success();
 }
 
-mlir::Value JParser::parseExpr(int min_bp) {
+bool JParser::isNumeric(const Token &tok) {
+  bool result = false;
+  switch (tok.kind) {
+  case Token::Int:
+  case Token::Float: {
+    result = true;
+  }
+  default:
+    break;
+  }
+  return result;
+}
+
+bool JParser::isVerb(const ExprPtr &e) {
+  if (!e)
+    return false;
+  return std::visit(Expr::cases{[](const PrimVerb &) { return true; },
+                                [](const AdverbApp &) { return true; },
+                                [](const ConjApp &) { return true; },
+                                [](const ForkApp &) { return true; },
+                                [](const AtopApp &) { return true; },
+                                [](const auto &) { return false; }},
+                    e->kind);
+}
+
+std::optional<ExprPtr> make_numeric(const Token &&tok) {
+  switch (tok.kind) {
+  case Token::Int:
+    int64_t i_result;
+    tok.text.getAsInteger(10, i_result);
+    return j::make<IntLit>(tok.location, i_result);
+  case Token::Float:
+    float64_t f_result;
+    tok.text.getAsDouble(f_result);
+    return j::make<FloatLit>(tok.location, f_result);
+  default:
+    return std::nullopt;
+  }
+}
+
+Prim tokenToPrim(Token::Kind k) {
+  switch (k) {
+  case Token::Plus:
+    return Prim::Plus;
+  case Token::Minus:
+    return Prim::Minus;
+  case Token::Star:
+    return Prim::Star;
+  case Token::Percent:
+    return Prim::Percent;
+  case Token::Caret:
+    return Prim::Caret;
+  case Token::Lt:
+    return Prim::Lt;
+  case Token::Gt:
+    return Prim::Gt;
+  case Token::Bar:
+    return Prim::Bar;
+  case Token::Hash:
+    return Prim::Hash;
+  case Token::Iota:
+    return Prim::Iota;
+  case Token::Eq:
+    return Prim::Eq;
+  case Token::Slash:
+    return Prim::Slash;
+  case Token::Backslash:
+    return Prim::Backslash;
+  case Token::Tilde:
+    return Prim::Tilde;
+  case Token::At:
+    return Prim::At;
+  case Token::Amp:
+    return Prim::Amp;
+  default:
+    llvm_unreachable("not a primitive");
+  }
+}
+
+std::optional<ExprPtr> JParser::parsePrimary() {
   Token t = consume();
-  auto nud_fn = getRule(t.kind).nud;
-  if (!nud_fn)
+  llvm::SMLoc loc = t.location;
+
+  switch (t.kind) {
+  // ── nums ────────────────────────────────────────────────────
+  case Token::Int:
+  case Token::Float: {
+    auto num = make_numeric(std::move(t)).value();
+    std::vector<ExprPtr> elems;
+    elems.push_back(std::move(num));
+    while (isNumeric(peek())) { // while the next token is numeric
+      Token next = consume();
+      elems.push_back(make_numeric(std::move(next)).value());
+    }
+    if (elems.size() == 1)
+      return std::move(elems[0]); // don't wrap singletons in a vec
+    return j::make<ArrayLit>(loc, std::move(elems));
+  }
+  // ── prims ────────────────────────────────────────────────────
+  case Token::Plus:
+  case Token::Minus:
+  case Token::Star:
+  case Token::Percent:
+  case Token::Caret:
+  case Token::Lt:
+  case Token::Gt:
+  case Token::Bar:
+  case Token::Hash:
+  case Token::Iota:
+  case Token::Eq: {
+    return j::make<PrimVerb>(loc, tokenToPrim(t.kind));
+  }
+  // ── idents ────────────────────────────────────────────────────
+  case Token::Ident:
+    return j::make<Ident>(loc, t.text.str());
+
+  // ── adverbs ────────────────────────────────────────────────────
+  case Token::Slash:
+  case Token::Backslash:
+  case Token::Tilde: {
+    return j::make<PrimVerb>(loc, tokenToPrim(t.kind));
+  }
+
+  // ── conjunctions ───────────────────────────────────────────────
+  case Token::At:
+  case Token::Amp: {
+    return j::make<PrimVerb>(loc, tokenToPrim(t.kind));
+  }
+    // ── parenthesized expressions ──────────────────────────────────
+  case Token::LPrn: {
+    auto inner = parseSentence();
+    if (inner && consume().kind != Token::RPrn) {
+      // TODO: investiget mlir and llvm error reporting
+      // mlir::emitError(inner->node->loc, "parsePrimary: expecting right
+      // paren");
+      return std::nullopt; // error(loc, "expected closing ')'");
+    }
+    return std::move(inner->node);
+  }
+
+  // ── end of input ───────────────────────────────────────────────
+  case Token::Newline:
+  case Token::EndOfFile:
     return nullptr;
 
-  mlir::Value lhs = (this->*nud_fn)();
-
-  while (min_bp < getRule(peek().kind).bp) {
-    Token next = consume();
-    auto led_fn = getRule(next.kind).led;
-    lhs = (this->*led_fn)(lhs);
+  default:
+    // mlir::emitError(loc, "unexpected token: " + t.text);
+    return std::nullopt;
   }
-  return lhs;
 }
 
-mlir::Value JParser::parseNoun() {
-  // For now, let's just emit an arith.constant for a double
-  double val;
-  currentToken.text.getAsDouble(val);
-  llvm::outs() << "CurrentTOk:" << currentToken.text << "\n";
+std::optional<Word> JParser::parseSentence() {
+  std::vector<Word> stack;
 
-  // TODO: handle if getAsDouble fails
-  auto type = builder.getF64Type();
-  return builder.create<mlir::arith::ConstantOp>(
-      builder.getUnknownLoc(), type, builder.getF64FloatAttr(val));
+  auto push = [&](Word w) { stack.push_back(std::move(w)); };
+  auto top = [&](int i) -> Word & { return stack[stack.size() - 1 - i]; };
+  auto popN = [&](int n) { stack.erase(stack.end() - n, stack.end()); };
+  auto current = [&]() -> Word & { return stack[stack.size() - 1]; };
+  auto expect = [&](Token::Kind should_be) {
+    return (peek().kind == should_be); // equality on kinds only
+  };
+
+  // try to reduce the top of the stack
+  // returns true if a reduction was made
+  auto reduce = [&]() -> bool {
+    int n = stack.size();
+    bool result = n >= 2; // build in the stack size check
+
+    WordClass w0 = top(0).wc; // rightmost
+    WordClass w1 = top(1).wc;
+    WordClass w2 = n >= 3 ? top(2).wc : WordClass::End;
+    WordClass w3 = n >= 4 ? top(3).wc : WordClass::End;
+
+    // V A → V  (adverb application: +/ -\ +~)
+    if (w1 == WordClass::Verb && w0 == WordClass::Adverb) {
+      auto verb = std::move(top(1).node);
+      llvm::SMLoc loc = top(1).node->loc;
+      auto adverb = std::get<PrimVerb>(top(0).node->kind).glyph;
+      auto adv_app = j::make<j::AdverbApp>(loc, std::move(verb), adverb);
+      popN(2);
+      push(Word{WordClass::Verb, std::move(adv_app)});
+      return true;
+    }
+
+    // V C V → V  (conjunction: f@g  f&g)
+    if (w2 == WordClass::Verb && w1 == WordClass::Conj &&
+        w0 == WordClass::Verb) {
+      auto lv = std::move(top(2).node);
+      auto conj = std::move(top(1).node);
+      auto rv = std::move(top(0).node);
+      llvm::SMLoc loc = conj->loc;
+      Prim prm = std::get<PrimVerb>(conj->kind).glyph;
+      auto conj_app = j::make<ConjApp>(loc, std::move(lv), prm, std::move(rv));
+      popN(3);
+      push(Word{WordClass::Verb, std::move(conj_app)});
+      return true;
+    }
+
+    // N V N → N  (dyadic: 1 2 3 + 4 5 6)
+    if (w2 == WordClass::Noun && w1 == WordClass::Verb &&
+        w0 == WordClass::Noun) {
+      auto lhs = std::move(top(2).node);
+      auto verb = std::move(top(1).node);
+      auto rhs = std::move(top(0).node);
+      llvm::SMLoc loc = verb->loc;
+      popN(3);
+      push({WordClass::Noun,
+            j::make<j::DyadApp>(
+                loc, std::move(verb), std::move(lhs), std::move(rhs))});
+      return true;
+    }
+
+    // V N → N  (monadic: + 1 2 3)
+    if (w1 == WordClass::Verb && w0 == WordClass::Noun) {
+      auto verb = std::move(top(1).node);
+      auto rhs = std::move(top(0).node);
+      llvm::SMLoc loc = verb->loc;
+      auto mon_app = j::make<j::MonadApp>(loc, std::move(verb), std::move(rhs));
+      popN(2);
+      push({WordClass::Noun, std::move(mon_app)});
+      return true;
+    }
+
+    // V V V → N  (fork: (+ - *))
+    if (w2 == WordClass::Verb && w1 == WordClass::Verb &&
+        w0 == WordClass::Verb) {
+      auto f = std::move(top(2).node);
+      auto g = std::move(top(1).node);
+      auto h = std::move(top(0).node);
+      llvm::SMLoc loc = g->loc;
+      popN(3);
+      auto frk =
+          j::make<ForkApp>(loc, std::move(f), std::move(g), std::move(h));
+      push({WordClass::Verb, std::move(frk)});
+      return true;
+    }
+
+    // V V → V  (atop: f@:g, also hook: (+ *))
+    if (w1 == WordClass::Verb && w0 == WordClass::Verb) {
+      auto f = std::move(top(1).node);
+      auto g = std::move(top(0).node);
+      llvm::SMLoc loc = f->loc;
+      auto atop_app = j::make<AtopApp>(loc, std::move(f), std::move(g));
+      popN(2);
+      push({WordClass::Verb, std::move(atop_app)});
+      return true;
+    }
+
+    return false;
+  };
+
+  // shift all words onto the stack, reducing eagerly after each shift here is
+  // the dataflow, we take tokens, parse them and throw them on the stack, this
+  // means that the stack only holds word-classed exprs, and after a parse we no
+  // longer have tokens, then we consume the stack until its a singleton and
+  // thats the result.
+  while (lexer.curPtr <= lexer.endPtr) {
+    Token t = peek();
+
+    if (t.kind == Token::EndOfFile || t.kind == Token::Newline)
+      break;
+
+    if (t.kind == Token::LPrn) {
+      consume();                    // throw away lPrn
+      auto inner = parseSentence(); // recurse for parens
+      if (expect(Token::RPrn)) {
+        consume(); // throw away RPrn
+      } // TODO: throw error
+      WordClass wc =
+          isVerb(inner.value().node) ? WordClass::Verb : WordClass::Noun;
+      push({wc, std::move(inner.value().node)});
+    } else {
+      auto node = parsePrimary(); // lex one token into a node
+      // START: implement isVerb
+      WordClass wc = isVerb(node.value()) ? WordClass::Verb : WordClass::Noun;
+      push({wc, std::move(node.value())});
+    }
+
+    // reduce as much as possible after each shift
+    while (reduce()) {
+    }
+  }
+
+  // final reductions
+  while (reduce()) {
+  }
+
+  if (stack.size() != 1)
+    return std::nullopt;
+
+  return std::move(stack[0]);
 }
 
-mlir::Value JParser::parseMonad() {
-  llvm::StringRef op = currentToken.text;
-  llvm::outs() << "parse monad: " << currentToken.text << "\n";
-  mlir::Value rhs = parseExpr(10); // Right-associative
-  // TODO: more monads
-  // return builder.create<j::NegateOp>(..., rhs);
-  return rhs;
-}
-
-mlir::Value JParser::parseDyad(mlir::Value lhs) {
-  llvm::StringRef op = currentToken.text;
-  // J Verbs are right-associative, so we use the same BP (10)
-  mlir::Value rhs = parseExpr(10);
-
-  // TODO: dispatch the op
-  return builder.create<j::PlusOp>(builder.getUnknownLoc(), lhs, rhs)
-      ->getResult(0);
-}
-
-mlir::Value JParser::parseAdv(mlir::Value lhs) {
-  // Adverbs (like /) modify the verb to their left
-  // In MLIR, this might produce a "Rank-Reduced" operation
-  return lhs;
+std::optional<ExprPtr> JParser::parse() {
+  return std::move(parseSentence().value().node);
 }

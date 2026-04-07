@@ -47,7 +47,6 @@ int main(int argc, char **argv) {
   }
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
 
-  // START: use smart_ptrs to express ownership in the compiler
   mlir::OpBuilder tempBuilder{&context};
   mlir::ModuleOp module = mlir::ModuleOp::create(tempBuilder.getUnknownLoc());
   mlir::OpBuilder builder(module.getBodyRegion());
@@ -55,14 +54,17 @@ int main(int argc, char **argv) {
   // initialize the lexer and parser
   auto lexer = j::JLexer{sourceMgr};
   auto parser = j::JParser{
-      builder, lexer}; // std::make_unique<j::JParser>(builder, lexer);
+      builder,
+      std::move(lexer)}; // std::make_unique<j::JParser>(builder, lexer);
 
   // kickoff
-  if (mlir::failed(parser.parse())) {
+  auto ast = parser.parse();
+  if (!ast) {
     llvm::errs() << "Error: Failed to parse J source.\n";
     return 1;
   }
 
+  // START: need to define the AST -> MLIR pass, do the printer first
   // 4. Print the generated MLIR to stdout
   module.dump(); // ->print(llvm::outs());
 
