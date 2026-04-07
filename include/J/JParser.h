@@ -29,7 +29,7 @@ struct Word {
 
 class JParser {
 public:
-  JParser(mlir::OpBuilder &b, j::JLexer &&l) : builder(b), lexer(std::move(l)) {
+  JParser(mlir::OpBuilder &b, j::JLexer &&l) : builder(b), lexer(l) {
     currentToken = lexer.getNextToken();
   }
 
@@ -38,7 +38,7 @@ public:
 
 private:
   mlir::OpBuilder &builder;
-  j::JLexer &&lexer;
+  j::JLexer &lexer;
   j::Token currentToken;
 
   // Parse functions
