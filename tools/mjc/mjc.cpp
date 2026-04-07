@@ -12,6 +12,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <J/JAstToMlir.h>
 #include <iostream>
 #include <memory>
 
@@ -27,7 +28,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // 1. Setup Context and Registry
+  // Setup Context and Registry
   mlir::DialectRegistry registry;
   registry.insert<mlir::arith::ArithDialect,
                   mlir::func::FuncDialect,
@@ -38,7 +39,7 @@ int main(int argc, char **argv) {
   mlir::MLIRContext context(registry);
   context.loadAllAvailableDialects();
 
-  // 2. Load the input file
+  // Load the input file
   llvm::SourceMgr sourceMgr;
   std::string filename = argv[1];
   auto fileOrErr = llvm::MemoryBuffer::getFile(filename);
@@ -70,8 +71,9 @@ int main(int argc, char **argv) {
   auto printer = j::JPrinter{output};
   printer.print(*ast);
 
-  // START: need to define the AST -> MLIR pass, do the printer first
-  // 4. Print the generated MLIR to stdout
+  // Print the generated MLIR to stdout
+  auto sinker = j::JAstToMlir(builder, sourceMgr);
+  auto mlir_val = sinker.sink(*ast);
   module.dump(); // ->print(llvm::outs());
 
   return 0;
