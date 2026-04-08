@@ -29,21 +29,19 @@ struct Word {
 
 class JParser {
 public:
-  JParser(mlir::OpBuilder &b, j::JLexer &&l) : builder(b), lexer(std::move(l)) {
-    currentToken = lexer.getNextToken();
-  }
+  JParser(mlir::OpBuilder &b, j::JLexer &&l) : builder(b), lexer(l) {}
 
   // The entry point to get a single MLIR Value (the result of the J expr)
   std::optional<ExprPtr> parse();
 
 private:
   mlir::OpBuilder &builder;
-  j::JLexer &&lexer;
+  j::JLexer &lexer;
   j::Token currentToken;
 
   // Parse functions
   std::optional<Word> parseSentence();
-  std::optional<ExprPtr> parsePrimary();
+  std::optional<ExprPtr> parsePrimary(Token);
 
   // Helpers
   Token consume() {

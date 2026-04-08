@@ -31,6 +31,7 @@ add_library(JDialect
     lib/J/JOps.cpp
     lib/J/JParser.cpp
     lib/J/JLexer.cpp
+    lib/J/JAstToMlir.cpp
 )
 
 add_executable(mjc ${CMAKE_CURRENT_SOURCE_DIR}/tools/mjc/mjc.cpp)

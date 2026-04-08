@@ -113,8 +113,7 @@ Prim tokenToPrim(Token::Kind k) {
   }
 }
 
-std::optional<ExprPtr> JParser::parsePrimary() {
-  Token t = consume();
+std::optional<ExprPtr> JParser::parsePrimary(Token t) {
   llvm::SMLoc loc = t.location;
 
   switch (t.kind) {
@@ -292,7 +291,7 @@ std::optional<Word> JParser::parseSentence() {
   // longer have tokens, then we consume the stack until its a singleton and
   // thats the result.
   while (lexer.curPtr <= lexer.endPtr) {
-    Token t = peek();
+    Token t = consume();
 
     if (t.kind == Token::EndOfFile || t.kind == Token::Newline)
       break;
@@ -307,7 +306,7 @@ std::optional<Word> JParser::parseSentence() {
           isVerb(inner.value().node) ? WordClass::Verb : WordClass::Noun;
       push({wc, std::move(inner.value().node)});
     } else {
-      auto node = parsePrimary(); // lex one token into a node
+      auto node = parsePrimary(t); // lex one token into a node
       WordClass wc = isVerb(node.value()) ? WordClass::Verb : WordClass::Noun;
       push({wc, std::move(node.value())});
     }
