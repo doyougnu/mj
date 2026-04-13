@@ -6,12 +6,14 @@
 namespace j {
 class JDialect : public mlir::Dialect {
 
-  public:
-    explicit JDialect(mlir::MLIRContext* ctx);
-    static llvm::StringRef getDialectNamespace() { return "j"; }
+  // START: tblgen ops, then JAstToMlir sinks to mj dialect, then rewrite over
+  // that dialect
+public:
+  explicit JDialect(mlir::MLIRContext *ctx);
+  static llvm::StringRef getDialectNamespace() { return "mj"; }
 
-    void initialize();
-  };
+  void initialize();
+};
 } // namespace j
 
 #endif

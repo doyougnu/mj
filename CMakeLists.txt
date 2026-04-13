@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(j-mlir LANGUAGES CXX)
+project(j-mlir LANGUAGES C CXX )
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,28 +16,38 @@ if(NOT CMAKE_BUILD_TYPE) # if the build type is not passed on the command line
     "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif()
 
-
-
 # 1. Locate Packages
 find_package(MLIR REQUIRED CONFIG)
 find_package(LLVM REQUIRED CONFIG)
 include_directories("${MLIR_INCLUDE_DIRS}")
 include_directories("${LLVM_INCLUDE_DIRS}")
 
-# 2. Define the Dialect Library
-# We group the source files here
-add_library(JDialect
-    lib/J/JDialect.cpp
-    lib/J/JOps.cpp
-    lib/J/JParser.cpp
-    lib/J/JLexer.cpp
-    lib/J/JAstToMlir.cpp
-)
+# 4. FORCE Absolute Path for TableGen (The Ninja Fix)
+# We check the environment variable from your mkShell first
+if(DEFINED ENV{MLIR_TABLEGEN_PATH})
+    set(MLIR_TABLEGEN_EXE "$ENV{MLIR_TABLEGEN_PATH}" CACHE FILEPATH "" FORCE)
+else()
+    find_program(MLIR_TABLEGEN_EXE NAMES mlir-tblgen REQUIRED)
+endif()
+
+# 2. Add MLIR/LLVM specific CMake modules to the path
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+include(LLVM-Config)
+include(AddLLVM)
+include(HandleLLVMOptions)
+
+################# Tablegen
+include(TableGen)
+include(AddMLIR)
+
+add_subdirectory(include/J)
+add_subdirectory(lib/J)
 
 add_executable(mjc ${CMAKE_CURRENT_SOURCE_DIR}/tools/mjc/mjc.cpp)
 
 # Use the variables defined by find_package OR passed via -D
-target_include_directories(JDialect PUBLIC
+target_include_directories(MJLib PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${MLIR_INCLUDE_DIRS}"
     "${LLVM_INCLUDE_DIRS}"
@@ -51,7 +61,7 @@ target_include_directories(mjc SYSTEM PRIVATE
 
 # 4. Link Libraries
 # MLIR targets often carry their own include requirements
-target_link_libraries(JDialect
+target_link_libraries(MJLib
     PUBLIC
     MLIRIR
     MLIRArithDialect

@@ -2,6 +2,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 
+#include "j/JOps.cpp.inc"
+
 using namespace j;
 
 /*************************** Constants ****************************************/

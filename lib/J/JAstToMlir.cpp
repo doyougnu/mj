@@ -87,13 +87,13 @@ mlir::Value j::JAstToMlir::operator()(const j::DyadApp &n, mlir::Location loc) {
     return nullptr;
 
   // Dispatch on the verb field (ExprPtr)
-  // We check if the verb's 'kind' variant currently holds a PrimVerb
   if (auto *prim = std::get_if<j::PrimVerb>(&n.verb->kind)) {
 
     // 3. Match the specific J character
     if (prim->glyph == Prim::Plus) {
       // TODO: type check before lowering? auto operands = matchTypes(lhs, rhs,
       // loc);
+      // TODO: lower to the j dialect, after installing the dyad op
       return builder.create<mlir::arith::AddIOp>(loc, lhs, rhs);
     }
     if (prim->glyph == Prim::Minus) {

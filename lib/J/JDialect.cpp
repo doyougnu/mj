@@ -13,8 +13,4 @@ JDialect::JDialect(MLIRContext *context)
 }
 
 // Optional: If you want to use standard MLIR types (like f64)
-void JDialect::initialize() {
-  addOperations< ConstantOp,
-                PlusOp
-                >();
-}
+void JDialect::initialize() { addOperations<ConstantOp, PlusOp>(); }

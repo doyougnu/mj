@@ -22,6 +22,7 @@
             llvm.lld
             llvm.tblgen
             gdb
+            llvm.mlir
           ];
 
           buildInputs = with pkgs; [
@@ -38,6 +39,7 @@
 
           shellHook = ''
           export LLVM_TABLEGEN_EXE=${llvm.tblgen}
+          export MLIR_TABLEGEN_PATH=${llvm.tblgen}/bin/mlir-tblgen
           export CC=clang
           export CXX=clang++
           echo "--- J-MLIR Development Shell ---"

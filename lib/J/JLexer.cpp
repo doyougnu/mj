@@ -46,7 +46,8 @@ Token JLexer::scanNumber() {
 Token JLexer::scanPrimitive() {
   const char *start = curPtr;
   const llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
-  const char base = *curPtr++;
+  // TODO: why wasn't this used? const char base = *curPtr++;
+  curPtr++;
 
   if (*curPtr == '.' || *curPtr == ':') {
     curPtr++; // move pointer to include it

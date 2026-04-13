@@ -78,6 +78,7 @@ public:
 /// In J, '+' is a dyad that performs element-wise addition.
 /// It supports "Rank Agreement," but for this C++ header, we define
 /// the interface for MLIR to track the operation.
+/// ***** This is just to see what a handwritten op would feel like *****
 class PlusOp : public mlir::Op<PlusOp, // PlusOp because CRTP
                                mlir::OpTrait::AtLeastNOperands<2>::Impl,
                                mlir::OpTrait::OneResult,
@@ -110,8 +111,8 @@ public:
                     mlir::Value rhs);
 
   // Helpers to access operands
-  mlir::Value getLHS() { return getOperation()->getOperand(0); }
-  mlir::Value getRHS() { return getOperation()->getOperand(1); }
+  mlir::Value getLhs() { return getOperation()->getOperand(0); }
+  mlir::Value getRhs() { return getOperation()->getOperand(1); }
 
   // Mandatory: Logical validation of the operation
   mlir::LogicalResult verify();

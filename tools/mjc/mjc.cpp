@@ -3,6 +3,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
+#include "mlir/Pass/PassManager.h"
 
 // Standard MLIR Headers
 #include "mlir/IR/BuiltinOps.h"
@@ -13,7 +14,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <J/JAstToMlir.h>
-#include <iostream>
 #include <memory>
 
 // J Dialect and friends
@@ -58,8 +58,7 @@ int main(int argc, char **argv) {
   auto parser = j::JParser{
       builder,
       std::move(lexer)}; // std::make_unique<j::JParser>(builder, lexer);
-
-  // kickoff
+                         // kickoff
 
   auto ast = parser.parse();
   if (!ast) {
@@ -74,6 +73,7 @@ int main(int argc, char **argv) {
   // Print the generated MLIR to stdout
   auto sinker = j::JAstToMlir(builder, sourceMgr);
   auto mlir_val = sinker.sink(*ast);
+  auto pm = mlir::PassManager{module->getName()};
   module.dump(); // ->print(llvm::outs());
 
   return 0;
