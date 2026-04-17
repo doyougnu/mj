@@ -40,6 +40,7 @@ bool JParser::isNumeric(const Token &tok) {
   case Token::Int:
   case Token::Float: {
     result = true;
+    break;
   }
   default:
     break;
@@ -190,7 +191,7 @@ std::optional<Word> JParser::parseSentence() {
   auto push = [&](Word w) { stack.push_back(std::move(w)); };
   auto top = [&](int i) -> Word & { return stack[stack.size() - 1 - i]; };
   auto popN = [&](int n) { stack.erase(stack.end() - n, stack.end()); };
-  auto current = [&]() -> Word & { return stack[stack.size() - 1]; };
+  // auto current = [&]() -> Word & { return stack[stack.size() - 1]; };
   auto expect = [&](Token::Kind should_be) {
     return (peek().kind == should_be); // equality on kinds only
   };
@@ -205,7 +206,7 @@ std::optional<Word> JParser::parseSentence() {
     WordClass w0 = top(0).wc; // rightmost
     WordClass w1 = top(1).wc;
     WordClass w2 = n >= 3 ? top(2).wc : WordClass::End;
-    WordClass w3 = n >= 4 ? top(3).wc : WordClass::End;
+    // WordClass w3 = n >= 4 ? top(3).wc : WordClass::End;
 
     // V A → V  (adverb application: +/ -\ +~)
     if (w1 == WordClass::Verb && w0 == WordClass::Adverb) {
