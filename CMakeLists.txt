@@ -41,7 +41,10 @@ include(HandleLLVMOptions)
 include(TableGen)
 include(AddMLIR)
 
-add_subdirectory(include/J)
+
+include_directories(${PROJECT_BINARY_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
+add_subdirectory(include)
 add_subdirectory(lib/J)
 
 add_executable(mjc ${CMAKE_CURRENT_SOURCE_DIR}/tools/mjc/mjc.cpp)
@@ -57,6 +60,7 @@ target_include_directories(mjc SYSTEM PRIVATE
     "${MLIR_INCLUDE_DIRS}"
     "${LLVM_INCLUDE_DIRS}"
     "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_BINARY_DIR}/include"
 )
 
 # 4. Link Libraries
@@ -72,7 +76,7 @@ target_link_libraries(MJLib
 )
 
 target_link_libraries(mjc PRIVATE
-    JDialect
+    MJDialect
     MLIROptLib
     MLIRSupport
 )

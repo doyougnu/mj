@@ -17,10 +17,10 @@
 #include <memory>
 
 // J Dialect and friends
-#include "J/JDialect.h"
 #include "J/JLexer.h"
 #include "J/JParser.h"
 #include "J/JPrinter.h"
+#include "J/MJDialect.h"
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
                   mlir::func::FuncDialect,
                   mlir::memref::MemRefDialect,
                   mlir::linalg::LinalgDialect,
-                  j::JDialect>();
+                  mj::MJDialect>();
 
   mlir::MLIRContext context(registry);
   context.loadAllAvailableDialects();
@@ -56,9 +56,8 @@ int main(int argc, char **argv) {
   // initialize the lexer and parser
   auto lexer = j::JLexer{sourceMgr};
   auto parser = j::JParser{
-      builder,
-      std::move(lexer)}; // std::make_unique<j::JParser>(builder, lexer);
-                         // kickoff
+      builder, std::move(lexer)}; // std::make_unique<j::JParser>(builder,
+                                  // lexer); kickoff
 
   auto ast = parser.parse();
   if (!ast) {

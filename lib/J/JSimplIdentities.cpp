@@ -6,45 +6,66 @@
 #include <llvm/Support/LogicalResult.h>
 #include <mlir/IR/PatternMatch.h>
 
-#include <variant>
-
-#include "J/Ast.h"
 #include "J/JOps.h"
+#include "J/MJDialect.h"
 
-namespace j {
+#include "mlir/IR/PatternMatch.h"
+
+/**** TODO: rewrite the match using this helper, like this:
+// Inside matchAndRewrite:
+using namespace mlir;
+Attribute attr;
+
+// This replaces the "getDefiningOp" + "dyn_cast" boilerplate
+if (matchPattern(lhs, m_Constant(&attr))) {
+    if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr)) {
+        if (intAttr.getInt() == 0) {
+            // Identity match!
+            rewriter.replaceOp(op, rhs);
+            return success();
+        }
+    }
+    }
+****/
+
+namespace mj {
 
 /*************************** Plus Identities **********************************/
 
-// START: implement over j::DyadOp for our own dialect
-struct LeftPlusIdentity : public mlir::OpRewritePattern<j::DyadApp> {
+struct LeftPlusIdentity : public mlir::OpRewritePattern<DyadAppOp> {
 
   LeftPlusIdentity(mlir::MLIRContext *context)
-      : mlir::OpRewritePattern<j::DyadApp>(context) {};
+      : mlir::OpRewritePattern<DyadAppOp>(context) {};
 
-  mlir::LogicalResult matchAndRewrite(j::DyadApp op,
-                                      mlir::PatternRewriter &rewriter) const {
-    // auto verb ::std::move(op.verb);
-    auto lhs = std::move(op.lhs);
-    auto rhs = std::move(op.rhs);
+  mlir::LogicalResult
+  matchAndRewrite(DyadAppOp op,
+                  mlir::PatternRewriter &rewriter) const override {
 
-    auto isConstZero = [](const j::ExprPtr &v) -> bool {
-      return std::visit(
-          Expr::cases{[](const j::IntLit &i) { return i.value == 0; },
-                      [](const auto &) { return false; }},
-          v->kind);
+    mlir::Value verb_val = op.getVerb();
+    auto verb = verb_val.getDefiningOp<VerbOp>();
+    if (!verb) {
+      return mlir::failure();
+    }
+
+    auto lhs = op.getLhs();
+    auto rhs = op.getRhs();
+
+    if (verb.getGlyph() != Prim::Plus) {
+      return mlir::failure();
+    }
+
+    auto isConstZero = [](const mlir::Value v) -> bool {
+      bool result = false;
+      auto constOp = v.getDefiningOp<ConstantOp>();
+      if (constOp) {
+        auto attr = llvm::dyn_cast<mlir::IntegerAttr>(constOp.getValue());
+        if (attr && attr.getInt() == 0) {
+          result = true;
+        }
+      }
+      return result;
     };
 
-    // TODO: change this to semigroup
-    auto isPlusOp = [](const j::ExprPtr &operand) -> bool {
-      if (!operand)
-        return false;
-
-      return std::visit(Expr::cases{[](const j::PrimVerb &p) {
-                                      return p.glyph == j::Prim::Plus;
-                                    },
-                                    [](const auto &) { return false; }},
-                        operand->kind);
-    };
     // x + 0 --> x
     if (isConstZero(rhs)) {
       rewriter.replaceOp(op, lhs);
@@ -61,4 +82,4 @@ struct LeftPlusIdentity : public mlir::OpRewritePattern<j::DyadApp> {
   }
 };
 
-}; // namespace j
+}; // namespace mj

@@ -1,6 +1,6 @@
 add_mlir_library(MJLib
   JOps.cpp
-  JDialect.cpp
+  MJDialect.cpp
   JParser.cpp
   JLexer.cpp
   JAstToMlir.cpp
