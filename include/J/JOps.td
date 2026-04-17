@@ -10,7 +10,7 @@ include "J/MJAttrs.td"
 
 // type synonym for the ops
 class MJ_Op<string mnemonic, list<Trait> traits = []> :
-    Op<MJ_Base_Dialect, mnemonic, traits>;
+    Op<MJDialect, mnemonic, traits>;
 
 def ConstantOp : MJ_Op<"constant", [Pure, ConstantLike]> {
   let summary = "A constant value in the J language.";
@@ -45,7 +45,7 @@ def DyadAppOp : MJ_Op<"dyad_app", [Pure]> {
     AnyType:$rhs
   );
   let results = (outs AnyType:$res); //TODO: add types
-  let hasCanonicalizer = 1;
+  // TODO: let hasCanonicalizer = 1;
 }
 
 #endif // MJ_OPS

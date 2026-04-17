@@ -76,7 +76,7 @@ target_link_libraries(MJLib
 )
 
 target_link_libraries(mjc PRIVATE
-    MJDialect
+    MJLib
     MLIROptLib
     MLIRSupport
 )

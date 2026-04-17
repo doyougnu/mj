@@ -14,10 +14,10 @@
 
 // AttrClasses
 #define GET_ATTRDEF_CLASSES
-#include "JOps.h.inc"
+#include "J/JOps.h.inc"
 
 // Pull in the Ops
 #define GET_OP_CLASSES
-#include "JOps.h.inc"
+#include "J/JOps.h.inc"
 
 #endif // MJ_JOPS_H

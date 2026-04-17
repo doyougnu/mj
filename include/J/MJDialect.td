@@ -5,7 +5,7 @@
 // dialect in JDialect.h.
 include "mlir/IR/OpBase.td"
 
-def MJ_Base_Dialect : Dialect {
+def MJDialect : Dialect {
   let name = "mj";
   let cppNamespace = "mj";
 
@@ -13,8 +13,8 @@ def MJ_Base_Dialect : Dialect {
 
   // This tells MLIR that you will provide the implementation
   // of the initialize() function in your C++ file.
-  let hasConstantMaterializer = 1;
-  let useDefaultTypePrinterParser = 1;
+  // let hasConstantMaterializer = 1;
+  // let useDefaultTypePrinterParser = 1;
 }
 
 #endif // MJ_DIALECT

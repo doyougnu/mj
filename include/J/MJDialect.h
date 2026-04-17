@@ -9,17 +9,10 @@
 
 #include <compare>
 
-namespace mj {
-
 #define GET_ENUM_CLASSES
-#include "J/MJAttrs.h.inc"
-
 #define GET_ATTRDEF_CLASSES
 #include "J/MJAttrs.h.inc"
 
-// dialect class first
 #include "J/MJDialect.h.inc"
-
-} // namespace mj
 
 #endif
