@@ -45,7 +45,7 @@ include(AddMLIR)
 include_directories(${PROJECT_BINARY_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(include)
-add_subdirectory(lib/J)
+add_subdirectory(lib)
 
 add_executable(mjc ${CMAKE_CURRENT_SOURCE_DIR}/tools/mjc/mjc.cpp)
 

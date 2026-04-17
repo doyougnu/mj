@@ -12,13 +12,13 @@
 namespace mj {
 
 #define GET_ENUM_CLASSES
-#include "MJAttrs.h.inc"
+#include "J/MJAttrs.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "MJAttrs.h.inc"
+#include "J/MJAttrs.h.inc"
 
 // dialect class first
-#include "MJDialect.h.inc"
+#include "J/MJDialect.h.inc"
 
 } // namespace mj
 

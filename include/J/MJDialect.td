@@ -15,7 +15,6 @@ def MJ_Base_Dialect : Dialect {
   // of the initialize() function in your C++ file.
   let hasConstantMaterializer = 1;
   let useDefaultTypePrinterParser = 1;
-  let useDefaultTypeID = 1;
 }
 
 #endif // MJ_DIALECT

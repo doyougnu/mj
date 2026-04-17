@@ -1,10 +1,10 @@
 add_mlir_library(MJLib
-  JOps.cpp
-  MJDialect.cpp
-  JParser.cpp
-  JLexer.cpp
-  JAstToMlir.cpp
-  JSimplIdentities.cpp
+  J/JOps.cpp
+  J/MJDialect.cpp
+  J/JParser.cpp
+  J/JLexer.cpp
+  J/JAstToMlir.cpp
+  J/JSimplIdentities.cpp
 
   # Standard MLIR Dialects you are likely using
   LINK_LIBS PUBLIC
@@ -12,10 +12,11 @@ add_mlir_library(MJLib
   MLIRSideEffectInterfaces
   MLIRArithDialect
   MLIRFuncDialect
-)
 
-# CRITICAL: Ensures the .inc files are generated before these .cpp files compile
-add_dependencies(MJLib MJTableGenTarget)
+  # Ensures the .inc files are generated before these .cpp files compile
+  DEPENDS
+  MJTableGenTarget
+)
 
 # Explicitly link your generated include path
 target_include_directories(MJLib PUBLIC
