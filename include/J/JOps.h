@@ -9,7 +9,7 @@
 
 #include "MJDialect.h"
 
-// START: namespace issues are now a real problem. Time to clean!
+// START: simple test misses the dot inflection, functions good enough
 // THEN: add control flow and idents and functions for parser
 
 // AttrClasses

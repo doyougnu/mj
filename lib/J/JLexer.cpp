@@ -54,7 +54,6 @@ Token JLexer::scanPrimitive() {
   }
 
   llvm::StringRef op = llvm::StringRef(start, curPtr - start);
-  // TODO: bug here, we don't dispatch over . and :, add tokens
   const Token::Kind tok = dispatch(op);
   return {tok, llvm::StringRef(start, curPtr - start), loc};
 }
@@ -90,6 +89,10 @@ Token JLexer::scanToken() {
 
 Token::Kind JLexer::dispatch(llvm::StringRef c) const {
   return llvm::StringSwitch<Token::Kind>(c)
+      // inflections first, order is matched top down
+      .StartsWith("=:", Token::GlobalAssign)
+      .StartsWith("=.", Token::LocalAssign)
+      .StartsWith("i.", Token::Iota)
       .StartsWith("+", Token::Plus)
       .StartsWith("_", Token::Minus)
       .StartsWith("*", Token::Star)
@@ -100,7 +103,6 @@ Token::Kind JLexer::dispatch(llvm::StringRef c) const {
       .StartsWith("=", Token::Eq)
       .StartsWith("-", Token::Bar)
       .StartsWith("#", Token::Hash)
-      .StartsWith("i.", Token::Iota)
       .StartsWith("~", Token::Tilde)
       .StartsWith("@", Token::At)
       .StartsWith("&", Token::Amp)
@@ -109,7 +111,9 @@ Token::Kind JLexer::dispatch(llvm::StringRef c) const {
       .StartsWith("\\", Token::Backslash)
       .StartsWith("\n", Token::Newline)
       .StartsWith("/", Token::Slash)
-      .StartsWith(";", Token::Semicolon);
+      .StartsWith(".", Token::Dot)
+      .StartsWith(";", Token::Semicolon)
+      .StartsWith(":", Token::Colon);
 }
 
 Token JLexer::peek() {

@@ -8,7 +8,18 @@
 
 namespace j {
 
-enum class WordClass { Noun, Verb, Adverb, Conj, LPrn, RPrn, End };
+enum class WordClass {
+  Noun,
+  Verb,
+  Adverb,
+  Conj,
+  Copula,
+  Name,
+  LPrn,
+  RPrn,
+  Assignment,
+  End
+};
 
 // A Token node pair, essentially a typing judgement of the node
 struct Word {
@@ -29,13 +40,12 @@ struct Word {
 
 class JParser {
 public:
-  JParser(mlir::OpBuilder &b, j::JLexer &&l) : builder(b), lexer(l) {}
+  JParser(mlir::OpBuilder &b, j::JLexer &&l) : lexer(l) {}
 
   // The entry point to get a single MLIR Value (the result of the J expr)
-  std::optional<ExprPtr> parse();
+  std::optional<Module> parse();
 
 private:
-  mlir::OpBuilder &builder;
   j::JLexer &lexer;
   j::Token currentToken;
 
@@ -53,6 +63,27 @@ private:
   WordClass classify(const Token &);
   bool isNumeric(const Token &);
   bool isVerb(const ExprPtr &);
+  bool isCopula(const ExprPtr &e) {
+    return (std::get<PrimVerb>(e->kind).glyph == Prim::GlobalAssign) ||
+           (std::get<PrimVerb>(e->kind).glyph == Prim::LocalAssign);
+  }
+  // TODO: move to Name newtype, parse, don't validate
+  bool isValidName(const ExprPtr &e) {
+    std::string s{};
+    if (const Ident *st = std::get_if<Ident>(&e->kind)) {
+      s = st->name;
+    }
+    if (s.empty() || !std::isalpha(static_cast<unsigned char>(s[0])))
+      return false;
+
+    for (unsigned char c : s) {
+      // J names allow alpha, digits, and underscores
+      if (!std::isalnum(c) && c != '_') {
+        return false;
+      }
+    }
+    return true;
+  }
 };
 
 } // namespace j

@@ -4,6 +4,7 @@
 #include "J/JOps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include <cctype>
 #include <cstdint>
 #include <mlir/IR/Diagnostics.h>
 #include <mlir/IR/Location.h>
@@ -29,6 +30,9 @@ WordClass classify(const j::Token &tok) {
     return WordClass::LPrn;
   case Token::RPrn:
     return WordClass::RPrn;
+  case Token::GlobalAssign:
+  case Token::LocalAssign:
+    return WordClass::Copula;
   default:
     return WordClass::Verb;
   }
@@ -109,6 +113,10 @@ Prim tokenToPrim(Token::Kind k) {
     return Prim::At;
   case Token::Amp:
     return Prim::Amp;
+  case Token::GlobalAssign:
+    return Prim::GlobalAssign;
+  case Token::LocalAssign:
+    return Prim::LocalAssign;
   default:
     llvm_unreachable("not a primitive");
   }
@@ -124,10 +132,13 @@ std::optional<ExprPtr> JParser::parsePrimary(Token t) {
     auto num = make_numeric(std::move(t)).value();
     std::vector<ExprPtr> elems;
     elems.push_back(std::move(num));
-    while (isNumeric(peek())) { // while the next token is numeric
+
+    // while the next token is numeric
+    while (isNumeric(peek())) {
       Token next = consume();
       elems.push_back(make_numeric(std::move(next)).value());
     }
+
     if (elems.size() == 1)
       return std::move(elems[0]); // don't wrap singletons in a vec
     return j::make<ArrayLit>(loc, std::move(elems));
@@ -149,6 +160,12 @@ std::optional<ExprPtr> JParser::parsePrimary(Token t) {
   // ── idents ────────────────────────────────────────────────────
   case Token::Ident:
     return j::make<Ident>(loc, t.text.str());
+
+  // ── copulas ────────────────────────────────────────────────────
+  case Token::GlobalAssign:
+    return j::make<PrimVerb>(loc, tokenToPrim(t.kind));
+  case Token::LocalAssign:
+    return j::make<PrimVerb>(loc, tokenToPrim(t.kind));
 
   // ── adverbs ────────────────────────────────────────────────────
   case Token::Slash:
@@ -180,7 +197,10 @@ std::optional<ExprPtr> JParser::parsePrimary(Token t) {
     return nullptr;
 
   default:
-    // mlir::emitError(loc, "unexpected token: " + t.text);
+    lexer.sourceMgr.PrintMessage(loc,
+                                 llvm::SourceMgr::DK_Error,
+                                 "Parser.parsePrimary: unexpected token: " +
+                                     t.text);
     return std::nullopt;
   }
 }
@@ -283,6 +303,24 @@ std::optional<Word> JParser::parseSentence() {
       return true;
     }
 
+    // Name Copula ?? -> Assignment we push an assignment node to the stack,
+    // then pop that to the module sentences
+    if (w2 == WordClass::Name && w1 == WordClass::Copula) {
+      auto the_ident = std::move(top(2).node);
+      auto the_copula = std::move(top(1).node);
+      auto the_body = std::move(top(0).node); // 0 is rightmost so its the body
+      llvm::SMLoc loc = the_copula->loc;
+      popN(3);
+      // TODO: dispatch local v global
+      auto assign =
+          j::make<Assign>(loc,
+                          std::move(std::get<j::Ident>(the_ident->kind).name),
+                          AssignKind::Global,
+                          std::move(the_body));
+      push({WordClass::Assignment, std::move(assign)});
+      return true;
+    }
+
     return false;
   };
 
@@ -291,7 +329,7 @@ std::optional<Word> JParser::parseSentence() {
   // means that the stack only holds word-classed exprs, and after a parse we no
   // longer have tokens, then we consume the stack until its a singleton and
   // thats the result.
-  while (lexer.curPtr <= lexer.endPtr) {
+  while (!lexer.isDone()) {
     Token t = consume();
 
     if (t.kind == Token::EndOfFile || t.kind == Token::Newline)
@@ -308,7 +346,18 @@ std::optional<Word> JParser::parseSentence() {
       push({wc, std::move(inner.value().node)});
     } else {
       auto node = parsePrimary(t); // lex one token into a node
-      WordClass wc = isVerb(node.value()) ? WordClass::Verb : WordClass::Noun;
+
+      // TODO: move to a function
+      // handle names
+      WordClass wc = WordClass::Noun;
+      if (isVerb(node.value()) && isCopula(node.value())) {
+        wc = WordClass::Copula;
+      } else if (isValidName(node.value())) {
+        wc = WordClass::Name;
+      } else { // just a verb
+        wc = WordClass::Verb;
+      }
+
       push({wc, std::move(node.value())});
     }
 
@@ -327,6 +376,13 @@ std::optional<Word> JParser::parseSentence() {
   return std::move(stack[0]);
 }
 
-std::optional<ExprPtr> JParser::parse() {
-  return std::move(parseSentence().value().node);
+std::optional<Module> JParser::parse() {
+  Module mod{};
+  while (!lexer.isDone()) {
+    auto sentence = parseSentence();
+    if (sentence) {
+      mod.sentences.push_back(std::move(sentence->node));
+    }
+  }
+  return mod;
 }

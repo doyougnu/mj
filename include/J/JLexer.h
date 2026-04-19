@@ -38,6 +38,10 @@ struct Token {
     EndOfFile,
     Newline,
     Semicolon,
+    GlobalAssign,
+    LocalAssign,
+    Colon,
+    Dot,
     Error,
 
   };
@@ -55,6 +59,8 @@ public:
   Token peek();
   const char *curPtr;
   const char *endPtr;
+  const llvm::SourceMgr &sourceMgr;
+  bool isDone() const { return curPtr >= endPtr; };
 
 private:
   Token scanToken();
@@ -64,7 +70,6 @@ private:
   Token::Kind dispatch(llvm::StringRef c) const;
   void skipWhitespace();
 
-  const llvm::SourceMgr &sourceMgr;
   std::optional<Token> lookahead;
 };
 

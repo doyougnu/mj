@@ -65,6 +65,9 @@ enum class Prim {
   // Conjunctions
   At,
   Amp,
+  // Copulas
+  GlobalAssign,
+  LocalAssign
 };
 
 struct PrimVerb {
@@ -94,12 +97,12 @@ struct AtopApp {
 // Application nodes
 //===----------------------------------------------------------------------===//
 
-struct MonadApp {
+struct MonadApp { // ala *:
   ExprPtr verb;
   ExprPtr rhs;
 };
 
-struct DyadApp {
+struct DyadApp { // ala 1 * 2
   ExprPtr verb;
   ExprPtr lhs;
   ExprPtr rhs;

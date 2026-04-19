@@ -70,10 +70,10 @@ int main(int argc, char **argv) {
   printer.print(*ast);
 
   // Print the generated MLIR to stdout
-  auto sinker = j::JAstToMlir(builder, sourceMgr);
-  auto mlir_val = sinker.sink(*ast);
-  auto pm = mlir::PassManager{module->getName()};
-  module.dump(); // ->print(llvm::outs());
+  // auto sinker = j::JAstToMlir(builder, sourceMgr);
+  // auto mlir_val = sinker.sink(*ast);
+  // auto pm = mlir::PassManager{module->getName()};
+  // module.dump(); // ->print(llvm::outs());
 
   return 0;
 }

@@ -14,8 +14,12 @@ struct JPrinter {
 
   explicit JPrinter(llvm::raw_ostream &os = llvm::outs()) : os(os) {}
 
-  // this is the injector to the printer
-  void print(const ExprPtr &expr) { std::visit(*this, expr->kind); }
+  void print(const Module &mod) {
+    for (const auto &sentence : mod.sentences) {
+      printExpr(sentence);
+    }
+  }
+  void printExpr(const ExprPtr &expr) { std::visit(*this, expr->kind); }
 
   void printIndent() {
     for (int i = 0; i < indent; ++i)
@@ -37,7 +41,7 @@ struct JPrinter {
     os << "ArrayLit[\n";
     ++indent;
     for (const auto &elem : n.elems)
-      print(elem);
+      printExpr(elem);
     --indent;
     printIndent();
     os << "]\n";
@@ -57,7 +61,7 @@ struct JPrinter {
     printIndent();
     os << "AdverbApp(" << primToString(n.adverb) << ")\n";
     ++indent;
-    print(n.verb);
+    printExpr(n.verb);
     --indent;
   }
 
@@ -65,8 +69,8 @@ struct JPrinter {
     printIndent();
     os << "ConjApp(" << primToString(n.conj) << ")\n";
     ++indent;
-    print(n.lverb);
-    print(n.rverb);
+    printExpr(n.lverb);
+    printExpr(n.rverb);
     --indent;
   }
 
@@ -74,8 +78,8 @@ struct JPrinter {
     printIndent();
     os << "MonadApp\n";
     ++indent;
-    print(n.verb);
-    print(n.rhs);
+    printExpr(n.verb);
+    printExpr(n.rhs);
     --indent;
   }
 
@@ -83,9 +87,9 @@ struct JPrinter {
     printIndent();
     os << "DyadApp\n";
     ++indent;
-    print(n.verb);
-    print(n.lhs);
-    print(n.rhs);
+    printExpr(n.verb);
+    printExpr(n.lhs);
+    printExpr(n.rhs);
     --indent;
   }
 
@@ -93,9 +97,9 @@ struct JPrinter {
     printIndent();
     os << "ForkApp\n";
     ++indent;
-    print(n.f);
-    print(n.g);
-    print(n.h);
+    printExpr(n.f);
+    printExpr(n.g);
+    printExpr(n.h);
     --indent;
   }
 
@@ -103,8 +107,8 @@ struct JPrinter {
     printIndent();
     os << "AtopApp\n";
     ++indent;
-    print(n.f);
-    print(n.g);
+    printExpr(n.f);
+    printExpr(n.g);
     --indent;
   }
 
@@ -113,7 +117,7 @@ struct JPrinter {
     os << "Assign(" << n.name << ", "
        << (n.kind == AssignKind::Local ? "=." : "=:") << ")\n";
     ++indent;
-    print(n.value);
+    printExpr(n.value);
     --indent;
   }
 
