@@ -9,8 +9,8 @@
 
 #include "MJDialect.h"
 
-// START: simple test misses the dot inflection, functions good enough
-// THEN: add control flow and idents and functions for parser
+// START: functions good enough add control flow and idents and functions for
+// parser
 
 // AttrClasses
 #define GET_ATTRDEF_CLASSES

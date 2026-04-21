@@ -120,6 +120,10 @@ mlir::Value j::JAstToMlir::operator()(const Assign &a, mlir::Location loc) {
   return nullptr;
 }
 
+mlir::Value j::JAstToMlir::operator()(const IfNode &iff, mlir::Location loc) {
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Api
 //===----------------------------------------------------------------------===//

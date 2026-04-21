@@ -34,6 +34,13 @@ struct Token {
     Amp,
     LPrn,
     RPrn,
+    // control Flow if
+    If,
+    Do,
+    Else,
+    End,
+    // control flow while
+    While,
     // special
     EndOfFile,
     Newline,
@@ -43,7 +50,6 @@ struct Token {
     Colon,
     Dot,
     Error,
-
   };
 
   Kind kind;
@@ -62,9 +68,46 @@ public:
   const llvm::SourceMgr &sourceMgr;
   bool isDone() const { return curPtr >= endPtr; };
 
+  inline bool isControl(Token t) {
+    switch (t.kind) {
+    case Token::While:
+    case Token::If:
+    case Token::Do:
+    case Token::Else:
+    case Token::End:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  inline bool iscontrol(char c) {
+    bool result = false;
+    const char *start = curPtr;
+    switch (c) {
+    case 'w':
+    case 'i':
+    case 'd':
+    case 'e': {
+      while (isalpha(*++curPtr)) { // skip to next non-alpha
+      }
+      if (*curPtr == '.') { // each control flow ends with a .
+        result = true;
+      }
+      curPtr = start;
+      break;
+
+    default:
+      break;
+    }
+    }
+    return result;
+  }
+
 private:
   Token scanToken();
   Token scanNumber();
+  Token scanControl();
   Token scanPrimitive();
   Token scanIdentifier();
   Token::Kind dispatch(llvm::StringRef c) const;

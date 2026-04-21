@@ -43,6 +43,18 @@ Token JLexer::scanNumber() {
   return {Token::Int, llvm::StringRef(start, curPtr - start), loc};
 }
 
+Token JLexer::scanControl() {
+  const char *start = curPtr;
+  llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
+
+  while (isalpha(*++curPtr)) { // get to the .
+  }
+  curPtr++; // consume the .
+  llvm::StringRef op = llvm::StringRef(start, curPtr - start);
+  const Token::Kind tok = dispatch(op);
+  return {tok, llvm::StringRef(start, curPtr - start), loc};
+}
+
 Token JLexer::scanPrimitive() {
   const char *start = curPtr;
   const llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
@@ -76,6 +88,9 @@ Token JLexer::scanToken() {
 
   char c = *curPtr;
 
+  if (iscontrol(c))
+    result = scanControl();
+
   if (isdigit(c)) // TODO: negatives || (c == '_' && isdigit(peekNext())))
     result = scanNumber();
 
@@ -92,6 +107,10 @@ Token::Kind JLexer::dispatch(llvm::StringRef c) const {
       // inflections first, order is matched top down
       .StartsWith("=:", Token::GlobalAssign)
       .StartsWith("=.", Token::LocalAssign)
+      .StartsWith("if.", Token::If)
+      .StartsWith("do.", Token::Do)
+      .StartsWith("else.", Token::Else)
+      .StartsWith("end.", Token::End)
       .StartsWith("i.", Token::Iota)
       .StartsWith("+", Token::Plus)
       .StartsWith("_", Token::Minus)

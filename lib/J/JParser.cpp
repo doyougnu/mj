@@ -205,7 +205,44 @@ std::optional<ExprPtr> JParser::parsePrimary(Token t) {
   }
 }
 
+// START: parse sentence is parseUntil!!
+
+std::optional<std::vector<ExprPtr>> JParser::parseManyUntil(Token::Kind k) {
+  std::vector<ExprPtr> sentences{};
+
+  while (*lexer.curPtr != k && !lexer.isDone()) {
+    auto sentence = parseSentence();
+    if (sentence) {
+      sentences.push_back(std::move(sentence->node));
+    }
+  }
+  return sentences;
+}
+
+std::optional<ExprPtr> JParser::parseControl(Token::Kind k) {
+  switch (k) {
+  case Token::If: { // we are at the front of an If
+    lexer.curPtr++; // move past the if tok
+    auto condition = parseUntil(Token::Do).value().node;
+    lexer.curPtr++; // skip Do
+    auto thn = parseManyUntil(Token::Else).value();
+    lexer.curPtr++; // skip else
+    auto els = parseManyUntil(Token::End).value();
+    const llvm::SMLoc loc = condition->loc;
+
+    return make<IfNode>(
+        loc, std::move(condition), std::move(thn), std::move(els));
+  }
+  case Token::While: // TODO
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<Word> JParser::parseSentence() {
+  return parseUntil(Token::Newline);
+}
+std::optional<Word> JParser::parseUntil(Token::Kind tok_end) {
   std::vector<Word> stack;
 
   auto push = [&](Word w) { stack.push_back(std::move(w)); };
@@ -233,7 +270,7 @@ std::optional<Word> JParser::parseSentence() {
       auto verb = std::move(top(1).node);
       llvm::SMLoc loc = top(1).node->loc;
       auto adverb = std::get<PrimVerb>(top(0).node->kind).glyph;
-      auto adv_app = j::make<j::AdverbApp>(loc, std::move(verb), adverb);
+      auto adv_app = make<j::AdverbApp>(loc, std::move(verb), adverb);
       popN(2);
       push(Word{WordClass::Verb, std::move(adv_app)});
       return true;
@@ -247,7 +284,7 @@ std::optional<Word> JParser::parseSentence() {
       auto rv = std::move(top(0).node);
       llvm::SMLoc loc = conj->loc;
       Prim prm = std::get<PrimVerb>(conj->kind).glyph;
-      auto conj_app = j::make<ConjApp>(loc, std::move(lv), prm, std::move(rv));
+      auto conj_app = make<ConjApp>(loc, std::move(lv), prm, std::move(rv));
       popN(3);
       push(Word{WordClass::Verb, std::move(conj_app)});
       return true;
@@ -262,7 +299,7 @@ std::optional<Word> JParser::parseSentence() {
       llvm::SMLoc loc = verb->loc;
       popN(3);
       push({WordClass::Noun,
-            j::make<j::DyadApp>(
+            make<j::DyadApp>(
                 loc, std::move(verb), std::move(lhs), std::move(rhs))});
       return true;
     }
@@ -272,7 +309,7 @@ std::optional<Word> JParser::parseSentence() {
       auto verb = std::move(top(1).node);
       auto rhs = std::move(top(0).node);
       llvm::SMLoc loc = verb->loc;
-      auto mon_app = j::make<j::MonadApp>(loc, std::move(verb), std::move(rhs));
+      auto mon_app = make<MonadApp>(loc, std::move(verb), std::move(rhs));
       popN(2);
       push({WordClass::Noun, std::move(mon_app)});
       return true;
@@ -286,8 +323,7 @@ std::optional<Word> JParser::parseSentence() {
       auto h = std::move(top(0).node);
       llvm::SMLoc loc = g->loc;
       popN(3);
-      auto frk =
-          j::make<ForkApp>(loc, std::move(f), std::move(g), std::move(h));
+      auto frk = make<ForkApp>(loc, std::move(f), std::move(g), std::move(h));
       push({WordClass::Verb, std::move(frk)});
       return true;
     }
@@ -297,7 +333,7 @@ std::optional<Word> JParser::parseSentence() {
       auto f = std::move(top(1).node);
       auto g = std::move(top(0).node);
       llvm::SMLoc loc = f->loc;
-      auto atop_app = j::make<AtopApp>(loc, std::move(f), std::move(g));
+      auto atop_app = make<AtopApp>(loc, std::move(f), std::move(g));
       popN(2);
       push({WordClass::Verb, std::move(atop_app)});
       return true;
@@ -313,10 +349,10 @@ std::optional<Word> JParser::parseSentence() {
       popN(3);
       // TODO: dispatch local v global
       auto assign =
-          j::make<Assign>(loc,
-                          std::move(std::get<j::Ident>(the_ident->kind).name),
-                          AssignKind::Global,
-                          std::move(the_body));
+          make<Assign>(loc,
+                       std::move(std::get<Ident>(the_ident->kind).name),
+                       AssignKind::Global,
+                       std::move(the_body));
       push({WordClass::Assignment, std::move(assign)});
       return true;
     }
@@ -332,9 +368,14 @@ std::optional<Word> JParser::parseSentence() {
   while (!lexer.isDone()) {
     Token t = consume();
 
-    if (t.kind == Token::EndOfFile || t.kind == Token::Newline)
+    if (t.kind == Token::EndOfFile || t.kind == tok_end)
       break;
 
+    // control flow
+    if (lexer.isControl(t)) {
+      auto control_node = parseControl(t.kind);
+      push({WordClass::Control, std::move(*control_node)});
+    }
     if (t.kind == Token::LPrn) {
       consume();                    // throw away lPrn
       auto inner = parseSentence(); // recurse for parens
@@ -347,7 +388,7 @@ std::optional<Word> JParser::parseSentence() {
     } else {
       auto node = parsePrimary(t); // lex one token into a node
 
-      // TODO: move to a function
+      // TODO: move name handler to a function
       // handle names
       WordClass wc = WordClass::Noun;
       if (isVerb(node.value()) && isCopula(node.value())) {

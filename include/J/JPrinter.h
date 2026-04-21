@@ -112,6 +112,24 @@ struct JPrinter {
     --indent;
   }
 
+  void operator()(const IfNode &iff) {
+    printIndent();
+    os << "IfNode\n";
+    ++indent;
+    os << "Condition:";
+    printExpr(iff.cond);
+
+    os << "Then:\n";
+    for (auto &t : iff.thn) {
+      printExpr(t);
+    }
+
+    os << "Else:\n";
+    for (auto &e : iff.els) {
+      printExpr(e);
+    }
+  }
+
   void operator()(const Assign &n) {
     printIndent();
     os << "Assign(" << n.name << ", "
@@ -146,6 +164,10 @@ private:
       return "i.";
     case Prim::Eq:
       return "=";
+    case Prim::GlobalAssign:
+      return "=:";
+    case Prim::LocalAssign:
+      return "=.";
     case Prim::Slash:
       return "/";
     case Prim::Backslash:

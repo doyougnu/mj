@@ -43,6 +43,8 @@ private:
 
   mlir::Value operator()(const AtopApp &n, mlir::Location loc);
 
+  mlir::Value operator()(const IfNode &iff, mlir::Location loc);
+
   mlir::Value operator()(const Assign &n, mlir::Location loc);
 };
 

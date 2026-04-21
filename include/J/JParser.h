@@ -18,6 +18,7 @@ enum class WordClass {
   LPrn,
   RPrn,
   Assignment,
+  Control,
   End
 };
 
@@ -52,6 +53,9 @@ private:
   // Parse functions
   std::optional<Word> parseSentence();
   std::optional<ExprPtr> parsePrimary(Token);
+  std::optional<Word> parseUntil(Token::Kind);
+  std::optional<std::vector<ExprPtr>> parseManyUntil(Token::Kind);
+  std::optional<ExprPtr> parseControl(Token::Kind);
 
   // Helpers
   Token consume() {

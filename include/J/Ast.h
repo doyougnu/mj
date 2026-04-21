@@ -44,7 +44,7 @@ struct Ident {
 //===----------------------------------------------------------------------===//
 // Verb nodes
 //===----------------------------------------------------------------------===//
-
+// TODO: inflexions are not represented at all here or in the parser. Add them
 enum class Prim {
   // Verbs
   Plus,
@@ -91,6 +91,17 @@ struct ForkApp {
 
 struct AtopApp {
   ExprPtr f, g;
+};
+
+struct IfNode {
+  ExprPtr cond;
+  std::vector<ExprPtr> thn;
+  std::vector<ExprPtr> els;
+};
+
+struct WhileNode {
+  ExprPtr cond;
+  std::vector<ExprPtr> body;
 };
 
 //===----------------------------------------------------------------------===//
@@ -143,6 +154,7 @@ using ExprKind = std::variant<IntLit,
                               AtopApp,
                               MonadApp,
                               DyadApp,
+                              IfNode,
                               Assign>;
 
 struct Expr {
