@@ -28,7 +28,7 @@ Token JLexer::getNextToken() {
 }
 
 void JLexer::skipWhitespace() {
-  while (isspace(*curPtr)) {
+  while (isblank(*curPtr)) {
     ++curPtr;
   }
   return;
@@ -49,7 +49,7 @@ Token JLexer::scanControl() {
 
   while (isalpha(*++curPtr)) { // get to the .
   }
-  curPtr++; // consume the .
+  ++curPtr; // consume the .
   llvm::StringRef op = llvm::StringRef(start, curPtr - start);
   const Token::Kind tok = dispatch(op);
   return {tok, llvm::StringRef(start, curPtr - start), loc};
@@ -71,11 +71,19 @@ Token JLexer::scanPrimitive() {
 }
 
 Token JLexer::scanIdentifier() {
+  skipWhitespace();
   const char *start = curPtr;
   while (isalpha(*++curPtr))
     ;
   const llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
   return {Token::Ident, llvm::StringRef(start, curPtr - start), loc};
+}
+
+Token JLexer::scanWhitespace() {
+  const char *start = curPtr;
+  curPtr++;
+  const llvm::SMLoc loc = llvm::SMLoc::getFromPointer(start);
+  return {Token::Newline, llvm::StringRef(start, curPtr - start), loc};
 }
 
 Token JLexer::scanToken() {
@@ -88,17 +96,18 @@ Token JLexer::scanToken() {
 
   char c = *curPtr;
 
-  if (iscontrol(c))
+  if (iscontrol(c)) {
     result = scanControl();
-
-  if (isdigit(c)) // TODO: negatives || (c == '_' && isdigit(peekNext())))
+    // TODO: negatives || (c == '_' && isdigit(peekNext())))
+  } else if (isdigit(c)) {
     result = scanNumber();
-
-  if (ispunct(c))
+  } else if (ispunct(c)) {
     result = scanPrimitive();
-
-  if (isalpha(c))
+  } else if (isalpha(c)) {
     result = scanIdentifier();
+  } else if (c == '\n') {
+    result = scanWhitespace();
+  }
   return result;
 }
 

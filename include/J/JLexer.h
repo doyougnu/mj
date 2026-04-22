@@ -66,8 +66,8 @@ public:
   const char *curPtr;
   const char *endPtr;
   const llvm::SourceMgr &sourceMgr;
-  bool isDone() const { return curPtr >= endPtr; };
 
+  inline bool isDone() const { return curPtr >= endPtr; };
   inline bool isControl(Token t) {
     switch (t.kind) {
     case Token::While:
@@ -110,6 +110,7 @@ private:
   Token scanControl();
   Token scanPrimitive();
   Token scanIdentifier();
+  Token scanWhitespace();
   Token::Kind dispatch(llvm::StringRef c) const;
   void skipWhitespace();
 

@@ -205,12 +205,10 @@ std::optional<ExprPtr> JParser::parsePrimary(Token t) {
   }
 }
 
-// START: parse sentence is parseUntil!!
-
 std::optional<std::vector<ExprPtr>> JParser::parseManyUntil(Token::Kind k) {
   std::vector<ExprPtr> sentences{};
 
-  while (*lexer.curPtr != k && !lexer.isDone()) {
+  while (currentToken.kind != k && !lexer.isDone()) {
     auto sentence = parseSentence();
     if (sentence) {
       sentences.push_back(std::move(sentence->node));
@@ -219,6 +217,8 @@ std::optional<std::vector<ExprPtr>> JParser::parseManyUntil(Token::Kind k) {
   return sentences;
 }
 
+// START: don't parse directly, use the stack, it is cleaner then we have the
+// control flow toks as bookmarks
 std::optional<ExprPtr> JParser::parseControl(Token::Kind k) {
   switch (k) {
   case Token::If: { // we are at the front of an If
@@ -233,6 +233,11 @@ std::optional<ExprPtr> JParser::parseControl(Token::Kind k) {
     return make<IfNode>(
         loc, std::move(condition), std::move(thn), std::move(els));
   }
+  case Token::Do:
+  case Token::Else: {
+    lexer.curPtr++; // skip the tok
+    return std::nullopt;
+  }
   case Token::While: // TODO
   default:
     return std::nullopt;
@@ -242,6 +247,7 @@ std::optional<ExprPtr> JParser::parseControl(Token::Kind k) {
 std::optional<Word> JParser::parseSentence() {
   return parseUntil(Token::Newline);
 }
+
 std::optional<Word> JParser::parseUntil(Token::Kind tok_end) {
   std::vector<Word> stack;
 
@@ -374,7 +380,9 @@ std::optional<Word> JParser::parseUntil(Token::Kind tok_end) {
     // control flow
     if (lexer.isControl(t)) {
       auto control_node = parseControl(t.kind);
-      push({WordClass::Control, std::move(*control_node)});
+      if (control_node) {
+        push({WordClass::Control, std::move(*control_node)});
+      } // else we just have
     }
     if (t.kind == Token::LPrn) {
       consume();                    // throw away lPrn
